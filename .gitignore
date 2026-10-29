@@ -1,0 +1,4 @@
+.env
+__pycache__/
+*.kartenstudio.json
+.claude/settings.local.json
