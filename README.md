@@ -20,6 +20,7 @@ Das Symbol neu erzeugen: `python tools/make_icon.py`.
 - Mitgliedskarte mit Kategorie (Gönner, Aktiv, Passiv), „gültig ab“ und automatisch berechnetem „gültig bis“ (ein Jahr)
 - QR-Code auf der Rückseite mit allen Kartendaten (Kartenart, Name, Nummer, Telefon, E-Mail, Wert, gültig bis; leere Angaben werden weggelassen)
 - Fortlaufende Nummern (z. B. GS-0001 … GS-0010) mit Vorsilbe, Stellenzahl, Startnummer und „Nächste Serie“
+- Doppelklick auf einen Text ändert ihn direkt auf der Karte; bei Datenfeldern (Name, Telefon, Kategorie …) nur für diese Karte, der QR-Code passt sich an
 - Text, Datenfelder `{{Spalte}}`, Bild/Logo, Fotofeld, QR-Code, Rechteck, Kreis, Linie
 - Gold-/Silber-/Roségold-Effekt, Leuchten, Verläufe, Hintergrundbild
 - Liste (Mitglieder oder Gutscheine) per Copy & Paste aus Excel oder über das Eingabeformular „Karte eingeben“ (Name, Nummer, Telefon, E-Mail, gültig bis) → Serienkarten, eine Zeile pro Karte

@@ -2418,6 +2418,11 @@ table.prev th,table.prev td{padding:4px 6px;border-bottom:1px solid var(--line);
 table.prev th{color:var(--muted);font-weight:700}
 table.prev tr.cur td{color:var(--gold)}
 .radios{display:flex;flex-direction:column;gap:6px}
+.inline-ed{position:fixed;z-index:30;display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--sel);border-radius:10px;padding:10px;box-shadow:0 14px 40px -10px #000}
+.inline-ed label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted);font-weight:600}
+.inline-ed input,.inline-ed select,.inline-ed textarea{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:6px 8px;color:var(--fg);font-size:14px}
+.inline-ed textarea{min-height:0}
+.inline-ed small{color:var(--dim);font-size:11px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--line2);padding:8px 14px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;font-size:13px;z-index:20}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #flipDlg{background:var(--panel);color:var(--fg);border:1px solid var(--line2);border-radius:12px;padding:20px 22px;max-width:460px}
@@ -2503,7 +2508,7 @@ table.prev tr.cur td{color:var(--gold)}
         <div class="note" style="font-size:12px">
           <span class="kbd">Pfeile</span> verschieben (mit <span class="kbd">Shift</span> 10×) ·
           <span class="kbd">Entf</span> löschen · <span class="kbd">Strg+D</span> duplizieren ·
-          <span class="kbd">Strg+Z</span> rückgängig · Ecke ziehen = Grösse, mit <span class="kbd">Shift</span> proportional
+          <span class="kbd">Strg+Z</span> rückgängig · Ecke ziehen = Grösse, mit <span class="kbd">Shift</span> proportional · <b>Doppelklick</b> auf einen Text = direkt auf der Karte ändern
         </div>
       </div>
     </aside>
@@ -3088,7 +3093,41 @@ cv.addEventListener("pointermove", e => {
 function endDrag(){ if (!drag) return; drag = null; state.snapV = state.snapH = false; commit(); render(); }
 cv.addEventListener("pointerup", endDrag);
 cv.addEventListener("pointercancel", endDrag);
-cv.addEventListener("dblclick", () => { const el = selEl(); if (el && (el.type === "text" || el.type === "qr")){ switchTab("props"); const t = $("#elText"); if (t){ t.focus(); t.select(); } } });
+cv.addEventListener("dblclick", () => {
+  const el = selEl(); if (!el) return;
+  if (el.type === "text") openEditor(el);
+  else if (el.type === "qr"){ switchTab("props"); const t = $("#elText"); if (t){ t.focus(); t.select(); } }
+});
+// Doppelklick auf einen Text: Feld direkt über der Karte. Bei {{Feldern}} werden die Angaben dieser Karte geändert, sonst der Text selbst.
+let editor = null;
+function closeEditor(){ if (!editor) return; editor.remove(); editor = null; commit(); buildProps(); refreshLayers(); render(); }
+function openEditor(el){
+  closeEditor();
+  const fields = fieldsOf(el), box = E("div", {class:"inline-ed"});
+  if (fields.length){
+    const r = ensureRec(fields), inputs = {};
+    fields.forEach(k => box.append(E("label", {}, E("span", {}, k), fieldInput(r, k, inputs))));
+    box.append(E("small", {}, `Ändert nur diese Karte (${state.rec + 1} von ${records.length}). Enter = fertig`));
+  } else {
+    const ta = E("textarea", {rows: String(Math.max(1, el.text.split("\n").length))});
+    ta.value = el.text;
+    ta.addEventListener("input", () => { el.text = ta.value; render(); refreshLayers(); });
+    box.append(ta, E("small", {}, "Enter = fertig · Shift+Enter = neue Zeile"));
+  }
+  const r = cv.getBoundingClientRect(), k = r.width / W;
+  const w = Math.max(240, el.w * k);
+  box.style.left = Math.min(window.innerWidth - w - 8, r.left + el.x * k) + "px";
+  box.style.top = (r.top + (el.y + elH(el)) * k + 6) + "px";
+  box.style.width = w + "px";
+  box.addEventListener("keydown", e => {
+    if (e.key === "Escape" || (e.key === "Enter" && !(e.target.tagName === "TEXTAREA" && e.shiftKey))){ e.preventDefault(); closeEditor(); }
+    e.stopPropagation();
+  });
+  document.body.append(box); editor = box;
+  const first = box.querySelector("input,select,textarea"); if (first){ first.focus(); if (first.select) first.select(); }
+}
+document.addEventListener("pointerdown", e => { if (editor && !editor.contains(e.target)) closeEditor(); }, true);
+window.addEventListener("resize", closeEditor);
 
 document.addEventListener("keydown", e => {
   const tg = e.target.tagName;
@@ -3237,7 +3276,13 @@ function buildProps(){
     const warn = E("div", {class:"warn"});
     sizeWarn = () => { warn.textContent = el.size * PT < 6 ? "Unter 6 pt wird Text auf dem Badgy200 schwer lesbar." : ""; };
     sizeWarn();
-    box.append(group("Inhalt", ta, chipRow(() => ta)));
+    const fs = fieldsOf(el);
+    if (fs.length && records.length && state.data){
+      const r = records[state.rec], inputs = {};
+      box.append(group("Angaben dieser Karte", E("div", {class:"grid2"}, fs.map(k => fld(k, fieldInput(r, k, inputs), true))),
+        E("p", {class:"empty", style:"margin:8px 0 0"}, "Gilt nur für diese Karte. Tipp: Doppelklick auf den Text ändert ihn direkt auf der Karte.")));
+    }
+    box.append(group(fs.length ? "Platzhalter (für alle Karten)" : "Inhalt", ta, chipRow(() => ta)));
     box.append(group("Schrift",
       E("div", {class:"grid2"},
         fld("Schriftart", selIn(el, "font", FONTS.map(f => [f, f])), true),
@@ -3386,29 +3431,41 @@ function parseDate(s){
 // Mitgliedschaft läuft ein Jahr: ab 01.11.2026 → bis 31.10.2027
 function oneYear(ab){ const d = parseDate(ab); return d ? fmtDate(new Date(d.getFullYear() + 1, d.getMonth(), d.getDate() - 1)) : ""; }
 function calcValidity(r){ if (cols.includes("Gültig ab") && cols.includes("Gültig bis")){ const b = oneYear(r["Gültig ab"]); if (b) r["Gültig bis"] = b; } }
+const FIELD_HINT = {"Telefon":"+43 660 1234567", "E-Mail":"name@beispiel.at", "Gültig ab":"TT.MM.JJJJ", "Gültig bis":"TT.MM.JJJJ", "Wert":"50 €"};
+const fieldsOf = el => [...new Set([...String(el.text || "").matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)].map(m => m[1]))];
+// Eingabefeld für eine Angabe einer Karte; „inputs“ sammelt die Felder einer Gruppe, damit „gültig bis“ nachzieht
+function fieldInput(r, k, inputs){
+  let i;
+  if (k === "Kategorie"){
+    const opts = CATEGORIES.includes(r[k]) || !r[k] ? CATEGORIES : [...CATEGORIES, r[k]];
+    i = E("select", {}, E("option", {value:""}, "– wählen –"), opts.map(c => E("option", {value:c}, c)));
+  } else i = E("input", {type: k === "E-Mail" ? "email" : k === "Telefon" ? "tel" : "text", placeholder: FIELD_HINT[k] || ""});
+  i.value = r[k] ?? ""; inputs[k] = i;
+  i.addEventListener("input", () => {
+    r[k] = i.value;
+    if (k === "Gültig ab"){ calcValidity(r); if (inputs["Gültig bis"]) inputs["Gültig bis"].value = r["Gültig bis"] ?? ""; }
+    writeCsv(); updRec(); render();
+  });
+  i.addEventListener("change", commit);
+  return i;
+}
+// Sorgt dafür, dass es eine aktuelle Karte mit diesen Spalten gibt, und liefert sie
+function ensureRec(fields){
+  let added = false;
+  fields.forEach(k => { if (!cols.includes(k)){ cols.push(k); added = true; } });
+  if (!records.length){ records.push(Object.fromEntries(cols.map(c => [c, ""]))); added = true; }
+  if (!state.data){ state.data = true; $("#dataChk").checked = true; }
+  if (added){ writeCsv(); commit(); updRec(); }
+  return records[state.rec];
+}
 function buildRecForm(){
   const box = $("#recForm"); box.innerHTML = "";
   if (!cols.length){ box.append(E("div", {class:"empty"}, "Zuerst eine Vorlage laden oder oben Spaltennamen eintragen.")); return; }
   const r = records[state.rec];
   if (r){
     box.append(E("div", {class:"empty", style:"margin-bottom:8px"}, `Karte ${state.rec + 1} von ${records.length}`));
-    const hint = {"Telefon":"+43 660 1234567", "E-Mail":"name@beispiel.at", "Gültig ab":"TT.MM.JJJJ", "Gültig bis":"TT.MM.JJJJ", "Wert":"50 €"};
     const inputs = {};
-    box.append(E("div", {class:"grid2"}, cols.map(k => {
-      let i;
-      if (k === "Kategorie"){
-        const opts = CATEGORIES.includes(r[k]) || !r[k] ? CATEGORIES : [...CATEGORIES, r[k]];
-        i = E("select", {}, E("option", {value:""}, "– wählen –"), opts.map(c => E("option", {value:c}, c)));
-      } else i = E("input", {type: k === "E-Mail" ? "email" : k === "Telefon" ? "tel" : "text", placeholder: hint[k] || ""});
-      i.value = r[k] ?? ""; inputs[k] = i;
-      i.addEventListener("input", () => {
-        r[k] = i.value;
-        if (k === "Gültig ab"){ calcValidity(r); if (inputs["Gültig bis"]) inputs["Gültig bis"].value = r["Gültig bis"] ?? ""; }
-        writeCsv(); updRec(); render();
-      });
-      i.addEventListener("change", commit);
-      return fld(k, i, k === "Name" || k === "E-Mail");
-    })));
+    box.append(E("div", {class:"grid2"}, cols.map(k => fld(k, fieldInput(r, k, inputs), k === "Name" || k === "E-Mail"))));
     if (cols.includes("Gültig ab") && cols.includes("Gültig bis"))
       box.append(E("p", {class:"empty", style:"margin:8px 0 0"}, "„Gültig bis“ wird aus „Gültig ab“ berechnet: ein Jahr Mitgliedschaft."));
   }
