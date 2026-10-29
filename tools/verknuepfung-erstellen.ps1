@@ -26,7 +26,7 @@ else { Write-Error 'Weder Edge noch Chrome gefunden.'; exit 1 }
 
 # Druckziel festlegen
 if ($Drucker) {
-  $rule = @{ kind = 'local'; namePattern = '^' + [regex]::Escape($Drucker) + '$' } | ConvertTo-Json -Compress
+  $rule = @{ kind = 'local'; namePattern = '^' + ([regex]::Escape($Drucker) -replace '\\ ', ' ') + '$' } | ConvertTo-Json -Compress
   New-Item -Path $policy -Force | Out-Null
   Set-ItemProperty -Path $policy -Name 'PrintPreviewDefaultDestinationSelectionRules' -Value $rule
   Write-Host "Druckziel: $Drucker"
