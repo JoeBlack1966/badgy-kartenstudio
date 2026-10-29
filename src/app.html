@@ -279,6 +279,7 @@ table.prev tr.cur td{color:var(--gold)}
           </div>
           <label class="chk" style="margin-top:10px"><input type="checkbox" id="prRev"> Rückseiten in umgekehrter Reihenfolge</label>
           <div id="prSummary" class="note" style="margin-top:12px"></div>
+          <div class="note" style="margin-top:8px"><b>Drucker wählen:</b> Nach „Drucken starten“ öffnet sich das Druckfenster von Chrome. Dort links oben bei <b>Ziel</b> „Evolis Badgy200“ wählen (sonst „Weitere anzeigen…“). Chrome merkt sich die Wahl.</div>
           <div class="btnrow"><button class="btn primary" id="printBtn">Drucken starten</button></div>
         </div>
         <div class="sect">
@@ -286,7 +287,7 @@ table.prev tr.cur td{color:var(--gold)}
           <div class="note">
             <ol>
               <li>Drucker einschalten, Karten in den Einzug legen.</li>
-              <li>Im Druckdialog von Chrome: Drucker <b>Evolis Badgy200</b>, Ränder <b>Keine</b>, Skalierung <b>Standard</b>. Papierformat ist durch die Karte vorgegeben (CR80).</li>
+              <li>Im Druckfenster von Chrome: Ziel <b>Evolis Badgy200</b>, Layout <b>Querformat</b>, Ränder <b>Keine</b>, Skalierung <b>Standard</b>. Papierformat ist durch die Karte vorgegeben (CR80).</li>
               <li>Der Badgy200 druckt <b>einseitig</b>. Mit „Vorder- und Rückseite“ druckt das Studio zuerst alle Vorderseiten. Danach erscheint ein Hinweis: Stapel wenden, wieder einlegen, „Rückseiten drucken“ klicken.</li>
               <li>Wenn der Stapel nach dem Wenden andersherum liegt: <b>Rückseiten in umgekehrter Reihenfolge</b> anhaken, damit Name und QR-Code zusammenpassen.</li>
               <li>Vor einer grossen Serie eine Testkarte drucken und prüfen, wie herum sie eingelegt werden muss.</li>
@@ -1330,7 +1331,8 @@ $("#flipGo").addEventListener("click", () => {
 });
 $("#flipCancel").addEventListener("click", () => $("#flipDlg").close());
 $("#printBtn").addEventListener("click", doPrint);
-$("#printTop").addEventListener("click", () => { $("#prSide").value = "both"; prSummary(); switchTab("print"); });
+// „Drucken“ oben: Einstellungen zeigen und gleich das Druckfenster von Chrome öffnen (dort wird der Drucker gewählt)
+$("#printTop").addEventListener("click", () => { prSummary(); switchTab("print"); doPrint(); });
 window.addEventListener("afterprint", () => { $("#printArea").innerHTML = ""; });
 
 // ---------- Hinweis ----------
