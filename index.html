@@ -2454,9 +2454,11 @@ table.prev tr.cur td{color:var(--gold)}
     <button class="btn" id="redoBtn" title="Wiederholen (Strg+Y)">↷</button>
     <div class="spacer"></div>
     <select id="tplSel" aria-label="Vorlage">
-      <option value="vip">Vorlage: VIP Gold</option>
-      <option value="neon">Vorlage: Neon Future</option>
-      <option value="clean">Vorlage: Clean White</option>
+      <option value="member">Vorlage: Mitgliedskarte</option>
+      <option value="vip">Vorlage: VIP-Karte</option>
+      <option value="voucher">Vorlage: Gutschein</option>
+      <option value="neon">Vorlage: VIP Neon</option>
+      <option value="clean">Vorlage: VIP Clean White</option>
       <option value="blank">Vorlage: Leer</option>
     </select>
     <button class="btn" id="tplBtn">Vorlage laden</button>
@@ -2502,16 +2504,16 @@ table.prev tr.cur td{color:var(--gold)}
     <section class="stage">
       <div class="stage-top">
         <label class="chk"><input type="checkbox" id="guidesChk" checked> Sicherheitsrand 3 mm</label>
-        <label class="chk"><input type="checkbox" id="dataChk" checked> Mit Mitgliederdaten anzeigen</label>
+        <label class="chk"><input type="checkbox" id="dataChk" checked> Mit Daten aus der Liste anzeigen</label>
       </div>
       <div id="cvWrap"><canvas id="cv" aria-label="Kartenvorschau"></canvas></div>
       <div class="stage-bot">
         <span class="spec">85,6 × 54 mm · 300 dpi · 1011 × 638 px</span>
         <span class="spacer"></span>
         <span class="recnav">
-          <button class="btn small" id="recPrev" aria-label="Vorheriges Mitglied">◀</button>
+          <button class="btn small" id="recPrev" aria-label="Vorherige Karte der Liste">◀</button>
           <span id="recInfo">–</span>
-          <button class="btn small" id="recNext" aria-label="Nächstes Mitglied">▶</button>
+          <button class="btn small" id="recNext" aria-label="Nächste Karte der Liste">▶</button>
         </span>
       </div>
     </section>
@@ -2519,16 +2521,20 @@ table.prev tr.cur td{color:var(--gold)}
     <aside class="right">
       <div class="tabs" role="tablist">
         <button class="on" data-tab="props">Gestalten</button>
-        <button data-tab="data">Mitglieder</button>
+        <button data-tab="data">Liste</button>
         <button data-tab="print">Drucken</button>
       </div>
       <div class="tabbody" id="tab-props"><div id="props"></div></div>
       <div class="tabbody" id="tab-data" hidden>
         <div class="sect">
-          <h3>Mitgliederliste</h3>
-          <div class="note">Erste Zeile = Spaltennamen. Trennzeichen <b>;</b> <b>,</b> oder Tab – du kannst direkt aus Excel kopieren und hier einfügen. Auf der Karte setzt <span class="kbd">{{Spaltenname}}</span> den Wert ein.</div>
+          <h3>Liste (Mitglieder oder Gutscheine)</h3>
+          <div class="note">Eine Zeile = eine Karte. Erste Zeile = Spaltennamen. Trennzeichen <b>;</b> <b>,</b> oder Tab – du kannst direkt aus Excel kopieren und hier einfügen. Auf der Karte setzt <span class="kbd">{{Spaltenname}}</span> den Wert ein.</div>
           <textarea id="csv" spellcheck="false" style="margin-top:10px;min-height:150px;font-family:var(--mono);font-size:12px"></textarea>
           <div id="csvInfo" class="empty" style="margin-top:6px"></div>
+        </div>
+        <div class="sect">
+          <h3>Fortlaufende Nummern</h3>
+          <div id="numBox"></div>
         </div>
         <div class="sect">
           <h3>Felder auf die Karte setzen</h3>
@@ -2547,8 +2553,8 @@ table.prev tr.cur td{color:var(--gold)}
               <select id="prSide"><option value="front">Vorderseite</option><option value="back">Rückseite</option></select></label>
             <label class="f full"><span>Karten</span>
               <select id="prWhich">
-                <option value="current">Aktuelles Mitglied</option>
-                <option value="all">Alle Mitglieder der Liste</option>
+                <option value="current">Aktuelle Karte der Liste</option>
+                <option value="all">Alle Karten der Liste</option>
                 <option value="none">Ohne Daten (Blanko-Karte)</option>
               </select></label>
             <label class="f"><span>Exemplare je Karte</span><input type="number" id="prCopies" min="1" max="50" value="1"></label>
@@ -2629,8 +2635,61 @@ const T = (o) => mk("text", o), R = (o) => mk("rect", o), C = (o) => mk("ellipse
 const bg = (o) => Object.assign({mode:"solid", c1:"#ffffff", c2:"#000000", angle:135, img:"", imgOpacity:1}, o);
 
 // ---------- Vorlagen ----------
+// QR-Inhalt der Rückseiten: alle Kartendaten als lesbarer Text
+const QR_DATA = {
+  member: "COOLTOURSZENE Mitgliedskarte\nName: {{Name}}\nNr.: {{Nummer}}\nGültig bis: {{Gültig bis}}",
+  vip: "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nGültig bis: {{Gültig bis}}",
+  voucher: "COOLTOURSZENE Gutschein\nNr.: {{Nummer}}\nWert: {{Wert}}\nGültig bis: {{Gültig bis}}"
+};
 const TEMPLATES = {
-  vip: () => ({ name:"VIP Clubkarte", sides:{
+  member: () => ({ name:"Mitgliedskarte", numbering:{prefix:"M-", start:1, count:10, digits:4}, sides:{
+    front:{ bg:bg({mode:"linear", c1:"#13324a", c2:"#06121c", angle:135}), els:[
+      T({text:"MEMBER",x:380,y:196,w:560,size:130,weight:800,color:"#ffffff",opacity:0.07,align:"right",lh:1,fit:false}),
+      T({text:"COOLTOURSZENE",x:80,y:70,w:600,size:30,weight:700,spacing:8,color:"#ffffff",fit:false}),
+      T({text:"MITGLIEDSKARTE",x:80,y:114,w:600,size:16,weight:600,spacing:6,color:"#7fb6d9",fit:false}),
+      R({x:80,y:152,w:120,h:3,fill:"#4fb3e8"}),
+      T({text:"{{Name}}",x:80,y:430,w:640,size:44,weight:600,color:"#ffffff",upper:true,spacing:2}),
+      T({text:"MITGLIEDSNR.",x:80,y:510,w:240,size:13,weight:700,spacing:4,color:"#7fb6d9",fit:false}),
+      T({text:"{{Nummer}}",x:80,y:532,w:260,size:26,font:"JetBrains Mono",weight:600,color:"#e6f2fa",spacing:1}),
+      T({text:"GÜLTIG BIS",x:380,y:510,w:220,size:13,weight:700,spacing:4,color:"#7fb6d9",fit:false}),
+      T({text:"{{Gültig bis}}",x:380,y:532,w:240,size:26,weight:500,color:"#e6f2fa",spacing:1})
+    ]},
+    back:{ bg:bg({mode:"solid", c1:"#f4f7f9"}), els:[
+      R({x:0,y:0,w:1011,h:92,fill:"#13324a"}),
+      T({text:"COOLTOURSZENE · MITGLIEDSKARTE",x:60,y:40,w:891,size:20,weight:700,spacing:5,color:"#ffffff",fit:false}),
+      T({text:"Diese Karte ist persönlich und\nnicht übertragbar.\nBitte beim Einlass vorzeigen.\nBei Verlust bitte sofort melden.",x:60,y:136,w:600,size:24,weight:500,color:"#1b2a35",lh:1.55,fit:false}),
+      Q({x:722,y:128,w:230,h:230,text:QR_DATA.member,color:"#0b1e2c",bgColor:"#ffffff"}),
+      T({text:"{{Nummer}}",x:722,y:368,w:230,size:18,font:"JetBrains Mono",weight:600,color:"#13324a",align:"center"}),
+      R({x:60,y:500,w:380,h:1.5,fill:"#9fb3c1"}),
+      T({text:"UNTERSCHRIFT",x:60,y:510,w:300,size:12,weight:700,spacing:4,color:"#6c8090",fit:false}),
+      T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#6c8090"})
+    ]}
+  }}),
+  voucher: () => ({ name:"Gutschein", numbering:{prefix:"GS-", start:1, count:10, digits:4}, sides:{
+    front:{ bg:bg({mode:"linear", c1:"#3d1020", c2:"#12060b", angle:135}), els:[
+      R({x:26,y:26,w:959,h:586,noFill:true,stroke:"#c9a04a",strokeW:2.5,strokePaint:"gold",radius:30}),
+      T({text:"COOLTOURSZENE",x:80,y:72,w:600,size:26,weight:700,spacing:8,paint:"gold",fit:false}),
+      T({text:"GUTSCHEIN",x:74,y:130,w:860,size:116,font:"Cinzel",weight:700,paint:"gold",lh:1,fit:false,glow:"#d6b46a",glowBlur:18}),
+      T({text:"im Wert von",x:84,y:290,w:500,size:46,font:"Great Vibes",weight:400,color:"#f3dfc8",fit:false}),
+      T({text:"{{Wert}}",x:80,y:350,w:560,size:84,font:"Playfair Display",weight:700,color:"#ffffff",lh:1}),
+      T({text:"GUTSCHEIN-NR.",x:80,y:512,w:260,size:13,weight:700,spacing:4,color:"#b9917a",fit:false}),
+      T({text:"{{Nummer}}",x:80,y:534,w:280,size:26,font:"JetBrains Mono",weight:600,color:"#f3dfc8",spacing:1}),
+      T({text:"GÜLTIG BIS",x:420,y:512,w:220,size:13,weight:700,spacing:4,color:"#b9917a",fit:false}),
+      T({text:"{{Gültig bis}}",x:420,y:534,w:260,size:26,weight:500,color:"#f3dfc8",spacing:1}),
+      T({text:"✦",x:880,y:520,w:60,size:40,paint:"gold",align:"right",fit:false})
+    ]},
+    back:{ bg:bg({mode:"solid", c1:"#fbf6ef"}), els:[
+      R({x:0,y:0,w:1011,h:12,paint:"gold"}),
+      T({text:"GUTSCHEIN · COOLTOURSZENE",x:60,y:60,w:640,size:20,weight:700,spacing:5,color:"#3d1020",fit:false}),
+      T({text:"Einlösbar bei allen Veranstaltungen\nder Cooltourszene.\nKeine Barauszahlung.\nNur einmal einlösbar.",x:60,y:120,w:620,size:23,weight:500,color:"#3a2a22",lh:1.55,fit:false}),
+      Q({x:722,y:112,w:230,h:230,text:QR_DATA.voucher,color:"#2a0b16",bgColor:"#ffffff"}),
+      T({text:"{{Nummer}}",x:722,y:352,w:230,size:18,font:"JetBrains Mono",weight:600,color:"#3d1020",align:"center"}),
+      R({x:60,y:500,w:380,h:1.5,fill:"#c9b29a"}),
+      T({text:"EINGELÖST AM / VON",x:60,y:510,w:340,size:12,weight:700,spacing:4,color:"#8c6f5c",fit:false}),
+      T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#8c6f5c"})
+    ]}
+  }}),
+  vip: () => ({ name:"VIP-Karte", numbering:{prefix:"VIP-", start:1, count:10, digits:4}, sides:{
     front:{ bg:bg({mode:"radial", c1:"#25221d", c2:"#050505"}), els:[
       R({x:26,y:26,w:959,h:586,noFill:true,stroke:"#c9a04a",strokeW:2.5,strokePaint:"gold",radius:30}),
       R({x:40,y:40,w:931,h:558,noFill:true,stroke:"#4a3d24",strokeW:1,radius:20}),
@@ -2655,7 +2714,7 @@ const TEMPLATES = {
       T({text:"DEINE VORTEILE",x:60,y:168,w:400,size:14,weight:700,spacing:5,color:"#8f7b52",fit:false}),
       T({text:"—  Bevorzugter Einlass bei allen Events\n—  Zugang zum VIP-Bereich\n—  Vorverkauf vor allen anderen\n—  Willkommensgetränk an der Bar",x:60,y:198,w:580,size:23,weight:400,color:"#e9dfc6",lh:1.6,fit:false}),
       R({x:700,y:150,w:250,h:250,fill:"#f3ead2",radius:18}),
-      Q({x:722,y:172,w:206,h:206,text:"VIP-{{Nummer}}",color:"#0b0a09",bgColor:""}),
+      Q({x:722,y:172,w:206,h:206,text:QR_DATA.vip,color:"#0b0a09",bgColor:""}),
       T({text:"{{Nummer}}",x:700,y:414,w:250,size:18,weight:600,spacing:3,color:"#cdb67c",align:"center"}),
       R({x:60,y:478,w:380,h:1.5,fill:"#5a4a2a"}),
       T({text:"UNTERSCHRIFT",x:60,y:488,w:300,size:12,weight:700,spacing:4,color:"#8f7b52",fit:false}),
@@ -2691,7 +2750,7 @@ const TEMPLATES = {
       T({text:"Nr. {{Nummer}}   ·   gültig bis {{Gültig bis}}",x:90,y:530,w:620,size:20,weight:500,color:"#6f675b",spacing:1})
     ]},
     back:{ bg:bg({mode:"solid", c1:"#f7f4ee"}), els:[
-      Q({x:760,y:200,w:190,h:190,text:"VIP-{{Nummer}}",color:"#1b1916",bgColor:""}),
+      Q({x:760,y:200,w:190,h:190,text:QR_DATA.vip,color:"#1b1916",bgColor:""}),
       T({text:"Zeige diese Karte am Einlass.",x:90,y:220,w:600,size:30,font:"Playfair Display",weight:700,color:"#1b1916",fit:false}),
       T({text:"www.cooltourszene.com",x:90,y:290,w:600,size:20,weight:500,color:"#6f675b",fit:false}),
       R({x:0,y:610,w:1011,h:28,paint:"gold"})
@@ -2703,6 +2762,13 @@ const TEMPLATES = {
   }})
 };
 const SAMPLE_CSV = "Name;Nummer;Gültig bis\nJoachim Schwarz;VIP-0001;12/2027\nMax Muster;VIP-0002;12/2027\nAnna Beispiel;VIP-0003;06/2027";
+// Beispiel-Liste je Vorlage (wird beim Laden der Vorlage eingesetzt)
+const TPL_CSV = {
+  member: "Name;Nummer;Gültig bis\nJoachim Schwarz;M-0001;12/2027\nMax Muster;M-0002;12/2027\nAnna Beispiel;M-0003;12/2027",
+  vip: SAMPLE_CSV, neon: SAMPLE_CSV, clean: SAMPLE_CSV,
+  voucher: "Nummer;Wert;Gültig bis\nGS-0001;50 €;31.12.2027\nGS-0002;50 €;31.12.2027\nGS-0003;50 €;31.12.2027"
+};
+const NUM_DEFAULT = {prefix:"Nr-", start:1, count:10, digits:4};
 
 // ---------- Zustand ----------
 let doc, csvText = SAMPLE_CSV, records = [], cols = [];
@@ -2753,7 +2819,7 @@ function parseCsv(){
   }
   if (state.rec >= records.length) state.rec = Math.max(0, records.length - 1);
 }
-const resolve = (t, rec) => !rec ? t : String(t).replace(/\{\{\s*([^}]+?)\s*\}\}/g, (m,k) => rec[k] !== undefined ? rec[k] : m);
+const resolve = (t, rec) => !rec ? t : String(t).replace(/\{\{\s*([^}]+?)\s*\}\}/g, (m,k) => rec[k] !== undefined ? rec[k] : "");
 
 // ---------- Zeichnen ----------
 function paintFill(ctx, p, x, y, w, h, solid){
@@ -3024,7 +3090,7 @@ document.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click",
   else if (t === "rect") addEl(R({x:W/2-120, y:H/2-60, w:240, h:120, fill:"#d6b46a", radius:12}));
   else if (t === "ellipse") addEl(C({x:W/2-80, y:H/2-80, w:160, h:160}));
   else if (t === "line") addEl(R({x:SAFE+40, y:H/2, w:400, h:3, paint:"gold"}));
-  else if (t === "qr") addEl(Q({x:W-SAFE-220, y:H/2-110, w:200, h:200, text: cols.includes("Nummer") ? "VIP-{{Nummer}}" : "https://www.cooltourszene.com", bgColor:"#ffffff"}));
+  else if (t === "qr") addEl(Q({x:W-SAFE-220, y:H/2-110, w:200, h:200, text: cols.length ? [doc.name || "Karte", ...cols.map(k => `${k}: {{${k}}}`)].join("\n") : "https://www.cooltourszene.com", bgColor:"#ffffff"}));
   else if (t === "photo") addEl(mk("image", {x:SAFE+20, y:SAFE+20, w:200, h:250, fit:"cover", radius:12, photo:true}));
   else if (t === "image"){ imgTarget = null; $("#fileImg").click(); }
 }));
@@ -3161,7 +3227,7 @@ function buildProps(){
       E("div", {class:"btnrow"}, E("button", {class:"btn small", onclick:() => { imgTarget = el.id; $("#fileImg").click(); }}, el.src ? "Bild ersetzen" : "Bild wählen"))));
   }
   if (el.type === "qr"){
-    const ti = E("input", {type:"text", id:"elText"});
+    const ti = E("textarea", {id:"elText", rows:"4"});
     bind(ti, () => el.text, v => el.text = v);
     const bgc = E("div", {class:"grid2", style:"margin-top:8px"},
       fld("Punkte", colorIn(el, "color")),
@@ -3169,7 +3235,13 @@ function buildProps(){
     const tr = E("input", {type:"checkbox"}); tr.checked = !el.bgColor;
     tr.addEventListener("change", () => { el.bgColor = tr.checked ? "" : "#ffffff"; commit(); render(); buildProps(); });
     box.append(group("Inhalt", ti, chipRow(() => ti),
-      E("p", {class:"empty", style:"margin:8px 0 0"}, "Für den Einlass-Scan z. B. VIP-{{Nummer}} oder eine Web-Adresse.")));
+      E("p", {class:"empty", style:"margin:8px 0 0"}, "Felder wie {{Name}} oder {{Nummer}} werden pro Karte eingesetzt. Kürzerer Inhalt ergibt grössere, leichter scanbare Punkte."),
+      E("div", {class:"btnrow"}, E("button", {class:"btn small", onclick:() => {
+        const known = ["Name","Nummer","Gültig bis","Wert"].filter(k => cols.includes(k));
+        const rest = cols.filter(k => !known.includes(k));
+        ti.value = [doc.name || "Karte", ...[...known, ...rest].map(k => `${k}: {{${k}}}`)].join("\n");
+        ti.dispatchEvent(new Event("input")); commit();
+      }}, "Alle Kartendaten einsetzen"))));
     box.append(group("Darstellung", bgc, E("label", {class:"chk", style:"margin-top:8px"}, tr, "Hintergrund transparent"),
       E("div", {class:"grid2", style:"margin-top:8px"}, fld("Fehlerkorrektur", selIn(el, "ecc", [["L","L – 7 %"],["M","M – 15 %"],["Q","Q – 25 %"],["H","H – 30 %"]]), true)),
       E("p", {class:"empty", style:"margin:8px 0 0"}, "Dunkle Punkte auf hellem Grund scannen am zuverlässigsten.")));
@@ -3232,7 +3304,7 @@ $("#recPrev").addEventListener("click", () => { if (state.rec > 0){ state.rec--;
 $("#recNext").addEventListener("click", () => { if (state.rec < records.length - 1){ state.rec++; updRec(); render(); } });
 function updRec(){
   const info = $("#recInfo");
-  if (!records.length){ info.textContent = "Keine Mitgliederliste"; }
+  if (!records.length){ info.textContent = "Keine Liste"; }
   else if (!state.data){ info.textContent = "Platzhalter-Ansicht"; }
   else { info.innerHTML = ""; const r = records[state.rec]; info.append(E("b", {}, r[cols[0]] || "–"), ` · ${state.rec + 1}/${records.length}`); }
   $("#recPrev").disabled = !state.data || state.rec <= 0;
@@ -3241,7 +3313,7 @@ function updRec(){
 }
 function renderCsvTable(){
   const t = $("#csvTable"); t.innerHTML = "";
-  $("#csvInfo").textContent = records.length ? `${records.length} Mitglieder · Spalten: ${cols.join(", ")}` : "Keine Datensätze erkannt.";
+  $("#csvInfo").textContent = records.length ? `${records.length} ${records.length === 1 ? "Karte" : "Karten"} · Spalten: ${cols.join(", ")}` : "Keine Datensätze erkannt.";
   if (!cols.length) return;
   t.append(E("tr", {}, cols.map(c => E("th", {}, c))));
   records.slice(0, 50).forEach((r, i) => t.append(E("tr", {class: i === state.rec ? "cur" : "", style:"cursor:pointer", onclick:() => { state.rec = i; state.data = true; $("#dataChk").checked = true; updRec(); render(); }}, cols.map(c => E("td", {}, r[c])))));
@@ -3253,6 +3325,58 @@ function renderCsvTable(){
 }
 $("#csv").addEventListener("input", e => { csvText = e.target.value; parseCsv(); updRec(); buildProps(); render(); });
 $("#csv").addEventListener("change", commit);
+
+// ---------- Fortlaufende Nummern ----------
+const numCfg = () => doc.numbering || (doc.numbering = {...NUM_DEFAULT});
+function fmtNum(n){ const c = numCfg(); return (c.prefix || "") + String(n).padStart(Math.max(1, c.digits | 0), "0"); }
+function setList(newCols, rows){
+  const delim = rows.some(r => r.some(v => String(v).includes(";"))) ? "\t" : ";";
+  csvText = [newCols, ...rows].map(r => r.join(delim)).join("\n");
+  $("#csv").value = csvText; state.rec = 0; state.data = true; $("#dataChk").checked = true;
+  parseCsv(); commit(); updRec(); buildProps(); buildNumbering(); render();
+}
+// Neue Liste: Spalte „Nummer“ fortlaufend, alle anderen Spalten (z. B. Wert, Gültig bis) aus der ersten Zeile übernommen
+function genList(){
+  const c = numCfg(), n = Math.max(1, Math.min(1000, c.count | 0)), first = records[0] || {};
+  const others = cols.filter(k => k !== "Nummer");
+  const rows = [];
+  for (let i = 0; i < n; i++) rows.push([fmtNum(c.start + i), ...others.map(k => first[k] ?? "")]);
+  setList(["Nummer", ...others], rows);
+  toast(`${n} Nummern erzeugt: ${fmtNum(c.start)} bis ${fmtNum(c.start + n - 1)}`);
+}
+// Bestehende Liste (z. B. Mitglieder mit Namen) der Reihe nach nummerieren
+function numberList(){
+  if (!records.length){ toast("Die Liste ist leer – zuerst Namen eintragen."); return; }
+  const c = numCfg(), newCols = cols.includes("Nummer") ? cols.slice() : [...cols, "Nummer"];
+  setList(newCols, records.map((r, i) => newCols.map(k => k === "Nummer" ? fmtNum(c.start + i) : (r[k] ?? ""))));
+  toast(`${records.length} Karten nummeriert: ${fmtNum(c.start)} bis ${fmtNum(c.start + records.length - 1)}`);
+}
+function nextSeries(){
+  const c = numCfg(); c.start = (c.start | 0) + Math.max(1, c.count | 0); genList();
+}
+function buildNumbering(){
+  const box = $("#numBox"); box.innerHTML = "";
+  const c = numCfg();
+  const num = (k, min) => { const i = E("input", {type:"number", min, step:"1"}); return bind(i, () => c[k], v => { const n = parseInt(v, 10); if (!isNaN(n)) c[k] = n; }, showRange); };
+  const range = E("div", {class:"empty", style:"margin-top:8px"});
+  function showRange(){ range.textContent = `Ergibt ${fmtNum(c.start)} bis ${fmtNum(c.start + Math.max(1, c.count | 0) - 1)}`; }
+  box.append(
+    E("div", {class:"grid2"},
+      fld("Vorsilbe", bind(E("input", {type:"text"}), () => c.prefix || "", v => c.prefix = v, showRange)),
+      fld("Stellen", num("digits", "1")),
+      fld("Erste Nummer", num("start", "0")),
+      fld("Anzahl Karten", num("count", "1"))),
+    range,
+    E("div", {class:"btnrow"},
+      E("button", {class:"btn small primary", onclick:genList}, "Neue Liste erzeugen"),
+      E("button", {class:"btn small", onclick:nextSeries}, "Nächste Serie"),
+      E("button", {class:"btn small", onclick:numberList}, "Liste durchnummerieren")),
+    E("div", {class:"note", style:"margin-top:10px"},
+      E("div", {}, E("b", {}, "Gutscheine:"), " „Neue Liste erzeugen“ legt so viele Karten an wie angegeben. Wert und „gültig bis“ werden aus der ersten Zeile der Liste übernommen – also dort zuerst eintragen."),
+      E("div", {style:"margin-top:6px"}, E("b", {}, "Mitglieder:"), " Namen in die Liste schreiben und „Liste durchnummerieren“ wählen."),
+      E("div", {style:"margin-top:6px"}, E("b", {}, "Nächste Serie"), " macht dort weiter, wo die letzte aufgehört hat.")));
+  showRange();
+}
 
 // ---------- Datei: Speichern, Öffnen, PNG ----------
 function download(blob, name){
@@ -3286,7 +3410,9 @@ $("#pngBtn").addEventListener("click", () => {
 });
 $("#tplBtn").addEventListener("click", () => {
   if (!confirm("Aktuelles Design durch die Vorlage ersetzen? Speichere vorher, wenn du es behalten willst.")) return;
-  doc = TEMPLATES[$("#tplSel").value](); state.sel = null; commit(); afterLoad();
+  const k = $("#tplSel").value;
+  doc = TEMPLATES[k](); if (TPL_CSV[k]) csvText = TPL_CSV[k];
+  state.sel = null; state.rec = 0; setSide("front"); afterLoad(); commit();
 });
 $("#docName").addEventListener("input", e => { doc.name = e.target.value; });
 $("#docName").addEventListener("change", commit);
@@ -3330,7 +3456,7 @@ function afterLoad(){
   $("#docName").value = doc.name || "";
   $("#csv").value = csvText;
   parseCsv(); state.sel = null;
-  buildProps(); refreshLayers(); updRec(); render();
+  buildProps(); refreshLayers(); updRec(); buildNumbering(); render();
 }
 (function init(){
   let loaded = false;
