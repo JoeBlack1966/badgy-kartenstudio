@@ -16,18 +16,22 @@ Das Symbol neu erzeugen: `python tools/make_icon.py`.
 
 ## Funktionen
 - Vorder- und Rückseite, Vorlagen: Mitgliedskarte, VIP-Karte, Gutschein, VIP Neon, VIP Clean White, Leer
-- QR-Code auf der Rückseite mit allen Kartendaten (Kartenart, Name, Nummer, Wert, gültig bis)
+- Original-Logo Cooltourszene in Gold auf allen drei Karten, auch als Werkzeug „Logo (Gold)“
+- Mitgliedskarte mit Kategorie (Gönner, Aktiv, Passiv), „gültig ab“ und automatisch berechnetem „gültig bis“ (ein Jahr)
+- QR-Code auf der Rückseite mit allen Kartendaten (Kartenart, Name, Nummer, Telefon, E-Mail, Wert, gültig bis; leere Angaben werden weggelassen)
 - Fortlaufende Nummern (z. B. GS-0001 … GS-0010) mit Vorsilbe, Stellenzahl, Startnummer und „Nächste Serie“
 - Text, Datenfelder `{{Spalte}}`, Bild/Logo, Fotofeld, QR-Code, Rechteck, Kreis, Linie
 - Gold-/Silber-/Roségold-Effekt, Leuchten, Verläufe, Hintergrundbild
-- Liste (Mitglieder oder Gutscheine) per Copy & Paste aus Excel → Serienkarten, eine Zeile pro Karte
+- Liste (Mitglieder oder Gutscheine) per Copy & Paste aus Excel oder über das Eingabeformular „Karte eingeben“ (Name, Nummer, Telefon, E-Mail, gültig bis) → Serienkarten, eine Zeile pro Karte
 - Druck direkt aus Chrome (eine Karte pro Seite, randlos), PNG-Export in 300 dpi
 - Speichern/Öffnen als `.kartenstudio.json`, Autosave im Browser
 
 ## Drucken auf dem Badgy200
 Im Chrome-Druckdialog: Drucker **Evolis Badgy200**, Ränder **Keine**, Skalierung **Standard**.
-Der Badgy200 druckt einseitig: zuerst alle Vorderseiten, dann den Stapel wenden und die Rückseiten drucken
-(bei Bedarf „Reihenfolge umkehren“).
+Der Badgy200 druckt einseitig. „Vorder- und Rückseite“ druckt automatisch zuerst alle Vorderseiten; danach
+erscheint ein Hinweis zum Wenden des Stapels und ein Knopf „Rückseiten drucken“ (bei Bedarf „Rückseiten in
+umgekehrter Reihenfolge“).
 
 ## Entwicklung
-Quelle: `src/app.html`. `python3 build.py` bettet die QR-Bibliothek (qrcode-generator, MIT) ein und schreibt `index.html`.
+Quelle: `src/app.html`. `python3 build.py` bettet die QR-Bibliothek (qrcode-generator, MIT) und das Gold-Logo ein und schreibt `index.html`.
+Das Gold-Logo entsteht aus `assets/logo-cooltourszene-original.jpg` mit `python tools/make_logo.py` (braucht Pillow).

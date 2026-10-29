@@ -98,7 +98,7 @@ label.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .f{display:flex;flex-direction:column;gap:4px;min-width:0}
 .f > span{font-size:11.5px;color:var(--muted);font-weight:600}
 .f.full{grid-column:1/-1}
-input[type=number],input[type=text],textarea,.f select{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:6px 8px}
+input[type=number],input[type=text],input[type=tel],input[type=email],textarea,.f select{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:6px 8px}
 input[type=number]{font-family:var(--mono);font-size:12.5px}
 textarea{resize:vertical;min-height:64px;line-height:1.4}
 input[type=color]{width:100%;height:32px;padding:2px;background:var(--bg);border:1px solid var(--line2);border-radius:6px;cursor:pointer}
@@ -122,6 +122,11 @@ table.prev tr.cur td{color:var(--gold)}
 .radios{display:flex;flex-direction:column;gap:6px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--line2);padding:8px 14px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;font-size:13px;z-index:20}
 #toast.show{opacity:1;transform:translateX(-50%)}
+#flipDlg{background:var(--panel);color:var(--fg);border:1px solid var(--line2);border-radius:12px;padding:20px 22px;max-width:460px}
+#flipDlg::backdrop{background:#000a}
+#flipDlg h3{margin:0 0 10px;font-size:16px;color:var(--gold)}
+#flipDlg ol{margin:0 0 14px;padding-left:20px}
+#flipDlg li{margin:4px 0}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 @media (max-width:1000px){
   body{overflow:auto}
@@ -135,7 +140,7 @@ table.prev tr.cur td{color:var(--gold)}
 @media print{
   @page{size:85.6mm 54mm;margin:0}
   html,body{height:auto;overflow:visible;background:#fff}
-  #app,#toast{display:none!important}
+  #app,#toast,#flipDlg{display:none!important}
   #printArea{display:block}
   #printArea img{display:block;width:85.6mm;height:54mm;break-after:page;page-break-after:always}
   #printArea img:last-child{break-after:auto;page-break-after:auto}
@@ -188,6 +193,7 @@ table.prev tr.cur td{color:var(--gold)}
           <button class="tool" data-add="ellipse"><span class="ic">●</span><span>Kreis</span></button>
           <button class="tool" data-add="line"><span class="ic">━</span><span>Linie</span></button>
           <button class="tool" data-add="photo"><span class="ic">◪</span><span>Fotofeld</span></button>
+          <button class="tool" data-add="logo"><span class="ic">★</span><span>Logo (Gold)</span></button>
         </div>
       </div>
       <div class="sect">
@@ -236,6 +242,10 @@ table.prev tr.cur td{color:var(--gold)}
           <div id="csvInfo" class="empty" style="margin-top:6px"></div>
         </div>
         <div class="sect">
+          <h3>Karte eingeben</h3>
+          <div id="recForm"></div>
+        </div>
+        <div class="sect">
           <h3>Fortlaufende Nummern</h3>
           <div id="numBox"></div>
         </div>
@@ -253,7 +263,7 @@ table.prev tr.cur td{color:var(--gold)}
           <h3>Was drucken?</h3>
           <div class="grid2">
             <label class="f full"><span>Kartenseite</span>
-              <select id="prSide"><option value="front">Vorderseite</option><option value="back">Rückseite</option></select></label>
+              <select id="prSide"><option value="both">Vorder- und Rückseite (automatisch nacheinander)</option><option value="front">Nur Vorderseite</option><option value="back">Nur Rückseite</option></select></label>
             <label class="f full"><span>Karten</span>
               <select id="prWhich">
                 <option value="current">Aktuelle Karte der Liste</option>
@@ -262,9 +272,9 @@ table.prev tr.cur td{color:var(--gold)}
               </select></label>
             <label class="f"><span>Exemplare je Karte</span><input type="number" id="prCopies" min="1" max="50" value="1"></label>
           </div>
-          <label class="chk" style="margin-top:10px"><input type="checkbox" id="prRev"> Reihenfolge umkehren</label>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="prRev"> Rückseiten in umgekehrter Reihenfolge</label>
           <div id="prSummary" class="note" style="margin-top:12px"></div>
-          <div class="btnrow"><button class="btn primary" id="printBtn">Druckdialog öffnen</button></div>
+          <div class="btnrow"><button class="btn primary" id="printBtn">Drucken starten</button></div>
         </div>
         <div class="sect">
           <h3>So druckst du auf dem Badgy200</h3>
@@ -272,8 +282,8 @@ table.prev tr.cur td{color:var(--gold)}
             <ol>
               <li>Drucker einschalten, Karten in den Einzug legen.</li>
               <li>Im Druckdialog von Chrome: Drucker <b>Evolis Badgy200</b>, Ränder <b>Keine</b>, Skalierung <b>Standard</b>. Papierformat ist durch die Karte vorgegeben (CR80).</li>
-              <li>Der Badgy200 druckt <b>einseitig</b>. Für die Rückseite erst alle Vorderseiten drucken, dann den Stapel gewendet wieder einlegen und die Rückseiten drucken.</li>
-              <li>Wenn der Stapel beim Wenden andersherum liegt: <b>Reihenfolge umkehren</b> anhaken, damit Name und QR-Code zusammenpassen.</li>
+              <li>Der Badgy200 druckt <b>einseitig</b>. Mit „Vorder- und Rückseite“ druckt das Studio zuerst alle Vorderseiten. Danach erscheint ein Hinweis: Stapel wenden, wieder einlegen, „Rückseiten drucken“ klicken.</li>
+              <li>Wenn der Stapel nach dem Wenden andersherum liegt: <b>Rückseiten in umgekehrter Reihenfolge</b> anhaken, damit Name und QR-Code zusammenpassen.</li>
               <li>Vor einer grossen Serie eine Testkarte drucken und prüfen, wie herum sie eingelegt werden muss.</li>
             </ol>
           </div>
@@ -285,6 +295,19 @@ table.prev tr.cur td{color:var(--gold)}
 </div>
 <div id="printArea"></div>
 <div id="toast" role="status"></div>
+<dialog id="flipDlg" aria-labelledby="flipTitle">
+  <h3 id="flipTitle">Vorderseiten gedruckt – jetzt die Rückseiten</h3>
+  <ol>
+    <li>Warte, bis die letzte Karte ausgegeben ist.</li>
+    <li>Nimm den Stapel aus der Ablage, <b>wende ihn</b> und lege ihn wieder in den Einzug.</li>
+    <li>Klicke auf „Rückseiten drucken“ und wähle wieder den Badgy200.</li>
+  </ol>
+  <label class="chk"><input type="checkbox" id="flipRev"> Rückseiten in umgekehrter Reihenfolge</label>
+  <div class="btnrow" style="justify-content:flex-end">
+    <button class="btn" id="flipCancel">Abbrechen</button>
+    <button class="btn primary" id="flipGo">Rückseiten drucken</button>
+  </div>
+</dialog>
 
 <script>
 (() => {
@@ -335,34 +358,43 @@ function mk(type, o){
   return Object.assign(base, d, o || {});
 }
 const T = (o) => mk("text", o), R = (o) => mk("rect", o), C = (o) => mk("ellipse", o), Q = (o) => mk("qr", o);
+// Original-Logo in Gold (build.py setzt assets/logo-cooltourszene-gold.png ein, Seitenverhältnis 1200 × 136)
+const LOGO_GOLD = "/*LOGO_GOLD*/";
+const LOGO_RATIO = 136 / 1200;
+const L = (o) => mk("image", Object.assign({src:LOGO_GOLD, fit:"contain", label:"Logo Cooltourszene"}, o, {h:Math.round(o.w * LOGO_RATIO)}));
 const bg = (o) => Object.assign({mode:"solid", c1:"#ffffff", c2:"#000000", angle:135, img:"", imgOpacity:1}, o);
 
 // ---------- Vorlagen ----------
 // QR-Inhalt der Rückseiten: alle Kartendaten als lesbarer Text
 const QR_DATA = {
-  member: "COOLTOURSZENE Mitgliedskarte\nName: {{Name}}\nNr.: {{Nummer}}\nGültig bis: {{Gültig bis}}",
-  vip: "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nGültig bis: {{Gültig bis}}",
+  member: "COOLTOURSZENE Mitgliedskarte\nKategorie: {{Kategorie}}\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig ab: {{Gültig ab}}\nGültig bis: {{Gültig bis}}",
+  vip: "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig bis: {{Gültig bis}}",
   voucher: "COOLTOURSZENE Gutschein\nNr.: {{Nummer}}\nWert: {{Wert}}\nGültig bis: {{Gültig bis}}"
 };
 const TEMPLATES = {
   member: () => ({ name:"Mitgliedskarte", numbering:{prefix:"M-", start:1, count:10, digits:4}, sides:{
     front:{ bg:bg({mode:"linear", c1:"#13324a", c2:"#06121c", angle:135}), els:[
       T({text:"MEMBER",x:380,y:196,w:560,size:130,weight:800,color:"#ffffff",opacity:0.07,align:"right",lh:1,fit:false}),
-      T({text:"COOLTOURSZENE",x:80,y:70,w:600,size:30,weight:700,spacing:8,color:"#ffffff",fit:false}),
-      T({text:"MITGLIEDSKARTE",x:80,y:114,w:600,size:16,weight:600,spacing:6,color:"#7fb6d9",fit:false}),
-      R({x:80,y:152,w:120,h:3,fill:"#4fb3e8"}),
-      T({text:"{{Name}}",x:80,y:430,w:640,size:44,weight:600,color:"#ffffff",upper:true,spacing:2}),
+      L({x:80,y:62,w:440}),
+      T({text:"MITGLIEDSKARTE",x:80,y:128,w:600,size:16,weight:600,spacing:6,color:"#7fb6d9",fit:false}),
+      R({x:676,y:62,w:268,h:58,noFill:true,stroke:"#4fb3e8",strokeW:2,radius:29}),
+      T({text:"{{Kategorie}}",x:676,y:76,w:268,size:26,weight:700,color:"#ffffff",upper:true,spacing:5,align:"center"}),
+      R({x:80,y:164,w:120,h:3,fill:"#4fb3e8"}),
+      T({text:"{{Name}}",x:80,y:396,w:640,size:44,weight:600,color:"#ffffff",upper:true,spacing:2}),
+      T({text:"{{Telefon}}     {{E-Mail}}",x:80,y:454,w:820,size:20,weight:500,color:"#a9cbe2",spacing:0.5}),
       T({text:"MITGLIEDSNR.",x:80,y:510,w:240,size:13,weight:700,spacing:4,color:"#7fb6d9",fit:false}),
       T({text:"{{Nummer}}",x:80,y:532,w:260,size:26,font:"JetBrains Mono",weight:600,color:"#e6f2fa",spacing:1}),
-      T({text:"GÜLTIG BIS",x:380,y:510,w:220,size:13,weight:700,spacing:4,color:"#7fb6d9",fit:false}),
-      T({text:"{{Gültig bis}}",x:380,y:532,w:240,size:26,weight:500,color:"#e6f2fa",spacing:1})
+      T({text:"GÜLTIG AB",x:360,y:510,w:220,size:13,weight:700,spacing:4,color:"#7fb6d9",fit:false}),
+      T({text:"{{Gültig ab}}",x:360,y:532,w:240,size:26,weight:500,color:"#e6f2fa",spacing:1}),
+      T({text:"GÜLTIG BIS",x:620,y:510,w:220,size:13,weight:700,spacing:4,color:"#7fb6d9",fit:false}),
+      T({text:"{{Gültig bis}}",x:620,y:532,w:240,size:26,weight:500,color:"#e6f2fa",spacing:1})
     ]},
     back:{ bg:bg({mode:"solid", c1:"#f4f7f9"}), els:[
       R({x:0,y:0,w:1011,h:92,fill:"#13324a"}),
       T({text:"COOLTOURSZENE · MITGLIEDSKARTE",x:60,y:40,w:891,size:20,weight:700,spacing:5,color:"#ffffff",fit:false}),
       T({text:"Diese Karte ist persönlich und\nnicht übertragbar.\nBitte beim Einlass vorzeigen.\nBei Verlust bitte sofort melden.",x:60,y:136,w:600,size:24,weight:500,color:"#1b2a35",lh:1.55,fit:false}),
-      Q({x:722,y:128,w:230,h:230,text:QR_DATA.member,color:"#0b1e2c",bgColor:"#ffffff"}),
-      T({text:"{{Nummer}}",x:722,y:368,w:230,size:18,font:"JetBrains Mono",weight:600,color:"#13324a",align:"center"}),
+      Q({x:702,y:118,w:250,h:250,text:QR_DATA.member,color:"#0b1e2c",bgColor:"#ffffff",ecc:"L"}),
+      T({text:"{{Nummer}}",x:702,y:380,w:250,size:18,font:"JetBrains Mono",weight:600,color:"#13324a",align:"center"}),
       R({x:60,y:500,w:380,h:1.5,fill:"#9fb3c1"}),
       T({text:"UNTERSCHRIFT",x:60,y:510,w:300,size:12,weight:700,spacing:4,color:"#6c8090",fit:false}),
       T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#6c8090"})
@@ -371,7 +403,7 @@ const TEMPLATES = {
   voucher: () => ({ name:"Gutschein", numbering:{prefix:"GS-", start:1, count:10, digits:4}, sides:{
     front:{ bg:bg({mode:"linear", c1:"#3d1020", c2:"#12060b", angle:135}), els:[
       R({x:26,y:26,w:959,h:586,noFill:true,stroke:"#c9a04a",strokeW:2.5,strokePaint:"gold",radius:30}),
-      T({text:"COOLTOURSZENE",x:80,y:72,w:600,size:26,weight:700,spacing:8,paint:"gold",fit:false}),
+      L({x:80,y:58,w:400}),
       T({text:"GUTSCHEIN",x:74,y:130,w:860,size:116,font:"Cinzel",weight:700,paint:"gold",lh:1,fit:false,glow:"#d6b46a",glowBlur:18}),
       T({text:"im Wert von",x:84,y:290,w:500,size:46,font:"Great Vibes",weight:400,color:"#f3dfc8",fit:false}),
       T({text:"{{Wert}}",x:80,y:350,w:560,size:84,font:"Playfair Display",weight:700,color:"#ffffff",lh:1}),
@@ -396,19 +428,26 @@ const TEMPLATES = {
     front:{ bg:bg({mode:"radial", c1:"#25221d", c2:"#050505"}), els:[
       R({x:26,y:26,w:959,h:586,noFill:true,stroke:"#c9a04a",strokeW:2.5,strokePaint:"gold",radius:30}),
       R({x:40,y:40,w:931,h:558,noFill:true,stroke:"#4a3d24",strokeW:1,radius:20}),
-      T({text:"COOLTOURSZENE",x:80,y:74,w:520,size:30,weight:700,spacing:9,paint:"gold",fit:false}),
-      T({text:"HOHENEMS · MEMBERS CLUB",x:80,y:116,w:520,size:16,weight:600,spacing:6,color:"#8f7b52",fit:false}),
-      R({x:80,y:214,w:118,h:88,paint:"gold",radius:14}),
-      R({x:80,y:244,w:118,h:2,fill:"#7a5a20"}),
-      R({x:80,y:272,w:118,h:2,fill:"#7a5a20"}),
-      R({x:132,y:214,w:2,h:88,fill:"#7a5a20"}),
+      L({x:80,y:64,w:400}),
+      T({text:"HOHENEMS · MEMBERS CLUB",x:80,y:126,w:520,size:16,weight:600,spacing:6,color:"#8f7b52",fit:false}),
       T({text:"VIP",x:500,y:118,w:440,size:215,font:"Cinzel",weight:700,paint:"gold",align:"right",spacing:4,lh:1,fit:false,glow:"#d6b46a",glowBlur:22}),
-      T({text:"MEMBER · CLUB · CARD",x:440,y:358,w:500,size:19,weight:600,spacing:8,color:"#cdb67c",align:"right",fit:false}),
-      T({text:"{{Name}}",x:80,y:440,w:600,size:42,weight:600,color:"#f3ead2",upper:true,spacing:3}),
+      T({text:"MEMBER · CLUB · CARD",x:440,y:340,w:500,size:19,weight:600,spacing:8,color:"#cdb67c",align:"right",fit:false}),
+      T({text:"{{Name}}",x:80,y:404,w:600,size:42,weight:600,color:"#f3ead2",upper:true,spacing:3}),
+      T({text:"{{Telefon}}     {{E-Mail}}",x:80,y:460,w:760,size:19,weight:500,color:"#cdb67c",spacing:0.5}),
       T({text:"MITGLIEDSNR.",x:80,y:516,w:220,size:13,weight:700,spacing:4,color:"#8f7b52",fit:false}),
       T({text:"{{Nummer}}",x:80,y:538,w:240,size:24,weight:500,color:"#e6d6a8",spacing:2}),
       T({text:"GÜLTIG BIS",x:340,y:516,w:200,size:13,weight:700,spacing:4,color:"#8f7b52",fit:false}),
       T({text:"{{Gültig bis}}",x:340,y:538,w:200,size:24,weight:500,color:"#e6d6a8",spacing:2}),
+      T({text:"✦",x:92,y:196,w:50,size:40,paint:"gold",opacity:1,fit:false,glow:"#d6b46a",glowBlur:8}),
+      T({text:"✦",x:162,y:262,w:32,size:22,paint:"gold",opacity:0.8,fit:false,glow:"#d6b46a",glowBlur:8}),
+      T({text:"✦",x:232,y:200,w:30,size:16,paint:"gold",opacity:0.7,fit:false,glow:"#d6b46a",glowBlur:0}),
+      T({text:"✦",x:286,y:246,w:40,size:30,paint:"gold",opacity:0.9,fit:false,glow:"#d6b46a",glowBlur:8}),
+      T({text:"✦",x:372,y:206,w:30,size:14,paint:"gold",opacity:0.6,fit:false,glow:"#d6b46a",glowBlur:0}),
+      T({text:"✦",x:420,y:272,w:30,size:18,paint:"gold",opacity:0.75,fit:false,glow:"#d6b46a",glowBlur:0}),
+      T({text:"✦",x:560,y:470,w:30,size:14,paint:"gold",opacity:0.6,fit:false,glow:"#d6b46a",glowBlur:0}),
+      T({text:"✦",x:820,y:456,w:32,size:22,paint:"gold",opacity:0.85,fit:false,glow:"#d6b46a",glowBlur:8}),
+      T({text:"✦",x:760,y:532,w:30,size:16,paint:"gold",opacity:0.7,fit:false,glow:"#d6b46a",glowBlur:0}),
+      T({text:"✦",x:930,y:430,w:30,size:13,paint:"gold",opacity:0.6,fit:false,glow:"#d6b46a",glowBlur:0}),
       T({text:"✦",x:880,y:520,w:60,size:40,paint:"gold",align:"right",fit:false})
     ]},
     back:{ bg:bg({mode:"solid", c1:"#0b0a09"}), els:[
@@ -416,9 +455,9 @@ const TEMPLATES = {
       T({text:"COOLTOURSZENE VIP",x:60,y:96,w:600,size:22,weight:700,spacing:8,paint:"gold",fit:false}),
       T({text:"DEINE VORTEILE",x:60,y:168,w:400,size:14,weight:700,spacing:5,color:"#8f7b52",fit:false}),
       T({text:"—  Bevorzugter Einlass bei allen Events\n—  Zugang zum VIP-Bereich\n—  Vorverkauf vor allen anderen\n—  Willkommensgetränk an der Bar",x:60,y:198,w:580,size:23,weight:400,color:"#e9dfc6",lh:1.6,fit:false}),
-      R({x:700,y:150,w:250,h:250,fill:"#f3ead2",radius:18}),
-      Q({x:722,y:172,w:206,h:206,text:QR_DATA.vip,color:"#0b0a09",bgColor:""}),
-      T({text:"{{Nummer}}",x:700,y:414,w:250,size:18,weight:600,spacing:3,color:"#cdb67c",align:"center"}),
+      R({x:690,y:140,w:270,h:270,fill:"#f3ead2",radius:18}),
+      Q({x:705,y:155,w:240,h:240,text:QR_DATA.vip,color:"#0b0a09",bgColor:"",ecc:"L"}),
+      T({text:"{{Nummer}}",x:690,y:424,w:270,size:18,weight:600,spacing:3,color:"#cdb67c",align:"center"}),
       R({x:60,y:478,w:380,h:1.5,fill:"#5a4a2a"}),
       T({text:"UNTERSCHRIFT",x:60,y:488,w:300,size:12,weight:700,spacing:4,color:"#8f7b52",fit:false}),
       T({text:"Persönlich und nicht übertragbar  ·  Bei Verlust bitte melden  ·  www.cooltourszene.com",x:60,y:564,w:891,size:15,weight:500,spacing:1.5,color:"#8f7b52",align:"left"})
@@ -464,10 +503,10 @@ const TEMPLATES = {
     back:{ bg:bg({mode:"solid", c1:"#ffffff"}), els:[] }
   }})
 };
-const SAMPLE_CSV = "Name;Nummer;Gültig bis\nJoachim Schwarz;VIP-0001;12/2027\nMax Muster;VIP-0002;12/2027\nAnna Beispiel;VIP-0003;06/2027";
+const SAMPLE_CSV = "Name;Nummer;Telefon;E-Mail;Gültig bis\nJoachim Schwarz;VIP-0001;+43 660 1234567;joachim@beispiel.at;12/2027\nMax Muster;VIP-0002;+43 664 7654321;max@beispiel.at;12/2027\nAnna Beispiel;VIP-0003;+43 676 1112233;anna@beispiel.at;06/2027";
 // Beispiel-Liste je Vorlage (wird beim Laden der Vorlage eingesetzt)
 const TPL_CSV = {
-  member: "Name;Nummer;Gültig bis\nJoachim Schwarz;M-0001;12/2027\nMax Muster;M-0002;12/2027\nAnna Beispiel;M-0003;12/2027",
+  member: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig ab;Gültig bis\nJoachim Schwarz;M-0001;Gönner;+43 660 1234567;joachim@beispiel.at;01.11.2026;31.10.2027\nMax Muster;M-0002;Aktiv;+43 664 7654321;max@beispiel.at;01.01.2027;31.12.2027\nAnna Beispiel;M-0003;Passiv;+43 676 1112233;anna@beispiel.at;15.03.2027;14.03.2028",
   vip: SAMPLE_CSV, neon: SAMPLE_CSV, clean: SAMPLE_CSV,
   voucher: "Nummer;Wert;Gültig bis\nGS-0001;50 €;31.12.2027\nGS-0002;50 €;31.12.2027\nGS-0003;50 €;31.12.2027"
 };
@@ -610,7 +649,8 @@ function qrMatrix(text, ecc){
 }
 function drawQr(ctx, el, rec){
   const s = Math.min(el.w, el.h);
-  const m = qrMatrix(resolve(el.text, rec) || " ", el.ecc || "M");
+  const txt = rec ? resolve(el.text, rec).split("\n").filter(l => !/:\s*$/.test(l)).join("\n") : el.text;
+  const m = qrMatrix(txt || " ", el.ecc || "M");
   if (el.bgColor){ ctx.fillStyle = el.bgColor; ctx.fillRect(el.x, el.y, s, s); }
   if (!m){ ctx.strokeStyle = el.color; ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, s, s); ctx.fillStyle = el.color; ctx.font = "600 20px Arial"; ctx.fillText("QR zu lang", el.x + 10, el.y + s/2); return; }
   const cell = s / m.n; ctx.fillStyle = el.color;
@@ -794,6 +834,7 @@ document.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click",
   else if (t === "ellipse") addEl(C({x:W/2-80, y:H/2-80, w:160, h:160}));
   else if (t === "line") addEl(R({x:SAFE+40, y:H/2, w:400, h:3, paint:"gold"}));
   else if (t === "qr") addEl(Q({x:W-SAFE-220, y:H/2-110, w:200, h:200, text: cols.length ? [doc.name || "Karte", ...cols.map(k => `${k}: {{${k}}}`)].join("\n") : "https://www.cooltourszene.com", bgColor:"#ffffff"}));
+  else if (t === "logo") addEl(L({x:SAFE+40, y:SAFE+30, w:440}));
   else if (t === "photo") addEl(mk("image", {x:SAFE+20, y:SAFE+20, w:200, h:250, fit:"cover", radius:12, photo:true}));
   else if (t === "image"){ imgTarget = null; $("#fileImg").click(); }
 }));
@@ -824,7 +865,7 @@ function isDarkBg(){
 function layerName(el){
   if (el.type === "text") return el.text.split("\n")[0] || "Text";
   if (el.type === "qr") return "QR: " + el.text;
-  if (el.type === "image") return el.photo ? "Fotofeld" : "Bild";
+  if (el.type === "image") return el.label || (el.photo ? "Fotofeld" : "Bild");
   if (el.type === "rect" && el.h <= 4) return "Linie";
   return TYPE_LABEL[el.type];
 }
@@ -940,7 +981,7 @@ function buildProps(){
     box.append(group("Inhalt", ti, chipRow(() => ti),
       E("p", {class:"empty", style:"margin:8px 0 0"}, "Felder wie {{Name}} oder {{Nummer}} werden pro Karte eingesetzt. Kürzerer Inhalt ergibt grössere, leichter scanbare Punkte."),
       E("div", {class:"btnrow"}, E("button", {class:"btn small", onclick:() => {
-        const known = ["Name","Nummer","Gültig bis","Wert"].filter(k => cols.includes(k));
+        const known = ["Kategorie","Name","Nummer","Telefon","E-Mail","Wert","Gültig ab","Gültig bis"].filter(k => cols.includes(k));
         const rest = cols.filter(k => !known.includes(k));
         ti.value = [doc.name || "Karte", ...[...known, ...rest].map(k => `${k}: {{${k}}}`)].join("\n");
         ti.dispatchEvent(new Event("input")); commit();
@@ -996,7 +1037,6 @@ document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click
 function setSide(s){
   state.side = s; state.sel = null;
   $("#sideFront").classList.toggle("on", s === "front"); $("#sideBack").classList.toggle("on", s === "back");
-  $("#prSide").value = s;
   buildProps(); refreshLayers(); render();
 }
 $("#sideFront").addEventListener("click", () => setSide("front"));
@@ -1013,6 +1053,7 @@ function updRec(){
   $("#recPrev").disabled = !state.data || state.rec <= 0;
   $("#recNext").disabled = !state.data || state.rec >= records.length - 1;
   renderCsvTable(); prSummary();
+  if (!$("#recForm").contains(document.activeElement)) buildRecForm();
 }
 function renderCsvTable(){
   const t = $("#csvTable"); t.innerHTML = "";
@@ -1028,6 +1069,72 @@ function renderCsvTable(){
 }
 $("#csv").addEventListener("input", e => { csvText = e.target.value; parseCsv(); updRec(); buildProps(); render(); });
 $("#csv").addEventListener("change", commit);
+
+// ---------- Eingabe einer Karte (bearbeitet die aktuelle Zeile der Liste) ----------
+function writeCsv(){
+  const rows = records.map(r => cols.map(k => r[k] ?? ""));
+  const delim = rows.some(r => r.some(v => String(v).includes(";"))) ? "\t" : ";";
+  csvText = [cols, ...rows].map(r => r.join(delim)).join("\n");
+  $("#csv").value = csvText;
+}
+const CATEGORIES = ["Gönner", "Aktiv", "Passiv"];
+const pad2 = n => String(n).padStart(2, "0");
+const fmtDate = d => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+function parseDate(s){
+  const m = String(s || "").trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/); if (!m) return null;
+  const y = m[3].length === 2 ? 2000 + +m[3] : +m[3], d = new Date(y, m[2] - 1, +m[1]);
+  return d.getMonth() === m[2] - 1 ? d : null;
+}
+// Mitgliedschaft läuft ein Jahr: ab 01.11.2026 → bis 31.10.2027
+function oneYear(ab){ const d = parseDate(ab); return d ? fmtDate(new Date(d.getFullYear() + 1, d.getMonth(), d.getDate() - 1)) : ""; }
+function calcValidity(r){ if (cols.includes("Gültig ab") && cols.includes("Gültig bis")){ const b = oneYear(r["Gültig ab"]); if (b) r["Gültig bis"] = b; } }
+function buildRecForm(){
+  const box = $("#recForm"); box.innerHTML = "";
+  if (!cols.length){ box.append(E("div", {class:"empty"}, "Zuerst eine Vorlage laden oder oben Spaltennamen eintragen.")); return; }
+  const r = records[state.rec];
+  if (r){
+    box.append(E("div", {class:"empty", style:"margin-bottom:8px"}, `Karte ${state.rec + 1} von ${records.length}`));
+    const hint = {"Telefon":"+43 660 1234567", "E-Mail":"name@beispiel.at", "Gültig ab":"TT.MM.JJJJ", "Gültig bis":"TT.MM.JJJJ", "Wert":"50 €"};
+    const inputs = {};
+    box.append(E("div", {class:"grid2"}, cols.map(k => {
+      let i;
+      if (k === "Kategorie"){
+        const opts = CATEGORIES.includes(r[k]) || !r[k] ? CATEGORIES : [...CATEGORIES, r[k]];
+        i = E("select", {}, E("option", {value:""}, "– wählen –"), opts.map(c => E("option", {value:c}, c)));
+      } else i = E("input", {type: k === "E-Mail" ? "email" : k === "Telefon" ? "tel" : "text", placeholder: hint[k] || ""});
+      i.value = r[k] ?? ""; inputs[k] = i;
+      i.addEventListener("input", () => {
+        r[k] = i.value;
+        if (k === "Gültig ab"){ calcValidity(r); if (inputs["Gültig bis"]) inputs["Gültig bis"].value = r["Gültig bis"] ?? ""; }
+        writeCsv(); updRec(); render();
+      });
+      i.addEventListener("change", commit);
+      return fld(k, i, k === "Name" || k === "E-Mail");
+    })));
+    if (cols.includes("Gültig ab") && cols.includes("Gültig bis"))
+      box.append(E("p", {class:"empty", style:"margin:8px 0 0"}, "„Gültig bis“ wird aus „Gültig ab“ berechnet: ein Jahr Mitgliedschaft."));
+  }
+  box.append(E("div", {class:"btnrow"},
+    E("button", {class:"btn small primary", onclick:() => {
+      const n = {}; cols.forEach(k => n[k] = "");
+      if (cols.includes("Nummer")) n.Nummer = fmtNum(numCfg().start + records.length);
+      const last = records[records.length - 1];
+      if (last) ["Gültig bis", "Wert", "Kategorie"].forEach(k => { if (k in n) n[k] = last[k]; });
+      if ("Gültig ab" in n){ n["Gültig ab"] = fmtDate(new Date()); calcValidity(n); }
+      records.push(n); state.rec = records.length - 1; state.data = true; $("#dataChk").checked = true;
+      writeCsv(); commit(); updRec(); buildRecForm(); render();
+      const f = $("#recForm input"); if (f) f.focus();
+    }}, "+ Neue Karte"),
+    r ? E("button", {class:"btn small", onclick:() => {
+      if (!confirm(`Karte ${state.rec + 1} aus der Liste löschen?`)) return;
+      records.splice(state.rec, 1); state.rec = Math.max(0, Math.min(state.rec, records.length - 1));
+      writeCsv(); commit(); updRec(); buildRecForm(); render();
+    }}, "Karte löschen") : null,
+    cols.includes("Gültig ab") && cols.includes("Gültig bis") ? E("button", {class:"btn small", onclick:() => {
+      records.forEach(calcValidity); writeCsv(); commit(); updRec(); buildRecForm(); render();
+      toast("„Gültig bis“ für alle Karten neu berechnet.");
+    }}, "Alle „gültig bis“ berechnen") : null));
+}
 
 // ---------- Fortlaufende Nummern ----------
 const numCfg = () => doc.numbering || (doc.numbering = {...NUM_DEFAULT});
@@ -1121,33 +1228,47 @@ $("#docName").addEventListener("input", e => { doc.name = e.target.value; });
 $("#docName").addEventListener("change", commit);
 
 // ---------- Drucken ----------
-function printList(){
+function printList(side){
   const which = $("#prWhich").value;
   let recs = which === "all" ? records.slice() : which === "current" ? [records.length ? records[state.rec] : null] : [null];
   if (!recs.length) recs = [null];
-  if ($("#prRev").checked) recs.reverse();
+  if (side === "back" && $("#prRev").checked) recs.reverse();
   return recs;
 }
 function prSummary(){
-  const recs = printList(), n = recs.length * Math.max(1, +$("#prCopies").value || 1);
-  const side = $("#prSide").value === "front" ? "Vorderseite" : "Rückseite";
+  const mode = $("#prSide").value, recs = printList(mode === "back" ? "back" : "front");
+  const n = recs.length * Math.max(1, +$("#prCopies").value || 1);
+  const side = {both:"erst Vorderseiten, dann Rückseiten", front:"Vorderseite", back:"Rückseite"}[mode];
   const first = recs[0] ? (recs[0][cols[0]] || "") : "Blanko";
   $("#prSummary").innerHTML = "";
   $("#prSummary").append(E("b", {}, `${n} ${n === 1 ? "Karte" : "Karten"} · ${side}`), E("br"), `Zuerst: ${first}`);
 }
 ["#prSide","#prWhich","#prCopies","#prRev"].forEach(s => $(s).addEventListener("input", prSummary));
-async function doPrint(){
-  const side = $("#prSide").value, copies = Math.max(1, Math.min(50, +$("#prCopies").value || 1));
+async function printSide(side){
+  const copies = Math.max(1, Math.min(50, +$("#prCopies").value || 1));
   const area = $("#printArea"); area.innerHTML = "";
-  for (const r of printList()){
+  for (const r of printList(side)){
     const url = renderToCanvas(side, r, 2).toDataURL("image/png");
     for (let k = 0; k < copies; k++) area.append(E("img", {src:url, alt:""}));
   }
   await Promise.all([...area.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
   window.print();
 }
+// Vorder- und Rückseite: erst alle Vorderseiten, dann Hinweis zum Wenden, dann die Rückseiten
+async function doPrint(){
+  const mode = $("#prSide").value;
+  if (mode !== "both") return printSide(mode);
+  await printSide("front");
+  $("#flipRev").checked = $("#prRev").checked;
+  $("#flipDlg").showModal();
+}
+$("#flipGo").addEventListener("click", () => {
+  $("#prRev").checked = $("#flipRev").checked; prSummary();
+  $("#flipDlg").close(); printSide("back");
+});
+$("#flipCancel").addEventListener("click", () => $("#flipDlg").close());
 $("#printBtn").addEventListener("click", doPrint);
-$("#printTop").addEventListener("click", () => { $("#prSide").value = state.side; switchTab("print"); });
+$("#printTop").addEventListener("click", () => { $("#prSide").value = "both"; prSummary(); switchTab("print"); });
 window.addEventListener("afterprint", () => { $("#printArea").innerHTML = ""; });
 
 // ---------- Hinweis ----------
