@@ -9,7 +9,9 @@ Internet wird nur für die Schriften (Google Fonts) gebraucht; ohne Internet gre
 ## Als Programm in der Taskleiste
 1. Rechtsklick auf `tools/verknuepfung-erstellen.ps1` → **Mit PowerShell ausführen**.
    Das legt „Badgy Kartenstudio“ auf dem Desktop und im Startmenü an (Symbol `kartenstudio.ico`,
-   öffnet als eigenes Fenster ohne Adressleiste).
+   öffnet als eigenes Edge-Fenster ohne Adressleiste). Über diese Verknüpfung wird **ohne Druckfenster direkt auf den
+   Badgy** gedruckt (`--kiosk-printing`, eigenes Browserprofil, Edge-Richtlinie für das Druckziel).
+   Anderer Druckername: `tools\verknuepfung-erstellen.ps1 -Drucker "Name"`.
 2. Startmenü öffnen, „Badgy Kartenstudio“ suchen, Rechtsklick → **An Taskleiste anheften**.
 
 Das Symbol neu erzeugen: `python tools/make_icon.py`.
