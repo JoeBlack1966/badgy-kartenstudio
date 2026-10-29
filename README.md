@@ -6,6 +6,14 @@ Kleines Designstudio für Mitgliedskarten, VIP-Karten und Gutscheine im Kartenfo
 `index.html` doppelklicken → öffnet in Chrome. Keine Installation, kein Server.
 Internet wird nur für die Schriften (Google Fonts) gebraucht; ohne Internet greifen Ersatzschriften.
 
+## Als Programm in der Taskleiste
+1. Rechtsklick auf `tools/verknuepfung-erstellen.ps1` → **Mit PowerShell ausführen**.
+   Das legt „Badgy Kartenstudio“ auf dem Desktop und im Startmenü an (Symbol `kartenstudio.ico`,
+   öffnet als eigenes Fenster ohne Adressleiste).
+2. Startmenü öffnen, „Badgy Kartenstudio“ suchen, Rechtsklick → **An Taskleiste anheften**.
+
+Das Symbol neu erzeugen: `python tools/make_icon.py`.
+
 ## Funktionen
 - Vorder- und Rückseite, Vorlagen: Mitgliedskarte, VIP-Karte, Gutschein, VIP Neon, VIP Clean White, Leer
 - QR-Code auf der Rückseite mit allen Kartendaten (Kartenart, Name, Nummer, Wert, gültig bis)
