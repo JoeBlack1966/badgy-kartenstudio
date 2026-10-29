@@ -174,7 +174,7 @@ table.prev tr.cur td{color:var(--gold)}
       <option value="clean">Vorlage: VIP Clean White</option>
       <option value="blank">Vorlage: Leer</option>
     </select>
-    <button class="btn" id="tplBtn">Vorlage laden</button>
+    <button class="btn" id="tplBtn" title="Gewählte Vorlage neu laden (eigene Änderungen werden ersetzt)">Neu laden</button>
     <div class="sep"></div>
     <button class="btn" id="openBtn">Öffnen</button>
     <button class="btn" id="saveBtn">Speichern</button>
@@ -443,16 +443,18 @@ const TEMPLATES = {
       T({text:"{{Nummer}}",x:80,y:538,w:240,size:24,weight:500,color:"#e6d6a8",spacing:2}),
       T({text:"GÜLTIG BIS",x:340,y:516,w:200,size:13,weight:700,spacing:4,color:"#8f7b52",fit:false}),
       T({text:"{{Gültig bis}}",x:340,y:538,w:200,size:24,weight:500,color:"#e6d6a8",spacing:2}),
-      T({text:"✦",x:92,y:196,w:50,size:40,paint:"gold",opacity:1,fit:false,glow:"#d6b46a",glowBlur:8}),
-      T({text:"✦",x:162,y:262,w:32,size:22,paint:"gold",opacity:0.8,fit:false,glow:"#d6b46a",glowBlur:8}),
-      T({text:"✦",x:232,y:200,w:30,size:16,paint:"gold",opacity:0.7,fit:false,glow:"#d6b46a",glowBlur:0}),
-      T({text:"✦",x:286,y:246,w:40,size:30,paint:"gold",opacity:0.9,fit:false,glow:"#d6b46a",glowBlur:8}),
-      T({text:"✦",x:372,y:206,w:30,size:14,paint:"gold",opacity:0.6,fit:false,glow:"#d6b46a",glowBlur:0}),
-      T({text:"✦",x:420,y:272,w:30,size:18,paint:"gold",opacity:0.75,fit:false,glow:"#d6b46a",glowBlur:0}),
-      T({text:"✦",x:560,y:470,w:30,size:14,paint:"gold",opacity:0.6,fit:false,glow:"#d6b46a",glowBlur:0}),
-      T({text:"✦",x:820,y:456,w:32,size:22,paint:"gold",opacity:0.85,fit:false,glow:"#d6b46a",glowBlur:8}),
-      T({text:"✦",x:760,y:532,w:30,size:16,paint:"gold",opacity:0.7,fit:false,glow:"#d6b46a",glowBlur:0}),
-      T({text:"✦",x:930,y:430,w:30,size:13,paint:"gold",opacity:0.6,fit:false,glow:"#d6b46a",glowBlur:0}),
+      T({text:"✦",x:86,y:196,w:56,size:44,paint:"gold",opacity:1,fit:false,glow:"#d6b46a",glowBlur:10}),
+      T({text:"✦",x:170,y:256,w:38,size:26,paint:"gold",opacity:0.9,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:236,y:190,w:34,size:22,paint:"gold",opacity:0.85,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:296,y:236,w:46,size:34,paint:"gold",opacity:1,fit:false,glow:"#d6b46a",glowBlur:10}),
+      T({text:"✦",x:380,y:196,w:34,size:22,paint:"gold",opacity:0.8,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:420,y:268,w:40,size:28,paint:"gold",opacity:0.9,fit:false,glow:"#d6b46a",glowBlur:10}),
+      T({text:"✦",x:500,y:456,w:34,size:22,paint:"gold",opacity:0.8,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:620,y:512,w:38,size:26,paint:"gold",opacity:0.85,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:760,y:446,w:42,size:30,paint:"gold",opacity:0.95,fit:false,glow:"#d6b46a",glowBlur:10}),
+      T({text:"✦",x:700,y:540,w:34,size:22,paint:"gold",opacity:0.8,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:900,y:410,w:36,size:24,paint:"gold",opacity:0.85,fit:false,glow:"#d6b46a",glowBlur:6}),
+      T({text:"✦",x:560,y:250,w:32,size:20,paint:"gold",opacity:0.75,fit:false,glow:"#d6b46a",glowBlur:6}),
       T({text:"✦",x:880,y:520,w:60,size:40,paint:"gold",align:"right",fit:false})
     ]},
     back:{ bg:bg({mode:"solid", c1:"#0b0a09"}), els:[
@@ -1275,12 +1277,15 @@ $("#pngBtn").addEventListener("click", () => {
   const tag = rec ? "-" + safeName(rec[cols[1]] || rec[cols[0]]) : "";
   c.toBlob(b => download(b, `${safeName(doc.name)}-${state.side === "front" ? "vorne" : "hinten"}${tag}.png`), "image/png");
 });
-$("#tplBtn").addEventListener("click", () => {
-  if (!confirm("Aktuelles Design durch die Vorlage ersetzen? Speichere vorher, wenn du es behalten willst.")) return;
-  const k = $("#tplSel").value;
-  doc = TEMPLATES[k](); if (TPL_CSV[k]) csvText = TPL_CSV[k];
+// Vorlage wechseln: sofort beim Auswählen; Strg+Z holt das vorige Design zurück
+function loadTemplate(k){
+  closeEditor();
+  doc = TEMPLATES[k](); doc.tpl = k; if (TPL_CSV[k]) csvText = TPL_CSV[k];
   state.sel = null; state.rec = 0; setSide("front"); afterLoad(); commit();
-});
+  toast(`Vorlage „${$("#tplSel").selectedOptions[0].textContent.replace("Vorlage: ", "")}“ geladen – Strg+Z macht es rückgängig.`);
+}
+$("#tplSel").addEventListener("change", () => loadTemplate($("#tplSel").value));
+$("#tplBtn").addEventListener("click", () => loadTemplate($("#tplSel").value));
 $("#docName").addEventListener("input", e => { doc.name = e.target.value; });
 $("#docName").addEventListener("change", commit);
 
@@ -1335,6 +1340,7 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add
 // ---------- Start ----------
 function afterLoad(){
   $("#docName").value = doc.name || "";
+  if (doc.tpl && TEMPLATES[doc.tpl]) $("#tplSel").value = doc.tpl;
   $("#csv").value = csvText;
   parseCsv(); state.sel = null;
   buildProps(); refreshLayers(); updRec(); buildNumbering(); render();
@@ -1342,7 +1348,7 @@ function afterLoad(){
 (function init(){
   let loaded = false;
   try { const s = localStorage.getItem(STORE); if (s){ const o = JSON.parse(s); if (o.doc && o.doc.sides){ doc = o.doc; csvText = o.csv ?? SAMPLE_CSV; loaded = true; } } } catch(e){}
-  if (!loaded) doc = TEMPLATES.vip();
+  if (!loaded){ doc = TEMPLATES.vip(); doc.tpl = "vip"; }
   afterLoad(); commit(); fitCanvas();
   if (typeof qrcode !== "function") toast("QR-Bibliothek fehlt – QR-Codes werden nicht gezeichnet.");
   if (document.fonts){
