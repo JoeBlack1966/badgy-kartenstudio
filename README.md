@@ -12,8 +12,14 @@ Internet wird nur für die Schriften (Google Fonts) gebraucht; ohne Internet gre
 2. Die Verknüpfung startet `tools/kartenstudio-starten.ps1`: Edge als eigenes Fenster mit eigenem Profil und
    `--kiosk-printing`. „Drucken“ geht damit **ohne Druckfenster direkt an den Badgy**: Das Skript trägt vor jedem
    Start den Drucker mit „Badgy“/„Evolis“ im Namen als letztes Druckziel (randlos) im Studio-Profil ein.
-3. Für die Taskleiste: Studio über die Verknüpfung starten und das Fenster anheften (ein so angehefteter Eintrag
-   startet Edge ohne das Skript – das Druckziel bleibt aber vom letzten Start gesetzt).
+   Ein Studio-Fenster, das ohne `--kiosk-printing` läuft (z. B. aus einem angehefteten Taskleisten-Eintrag), wird
+   dabei geschlossen und neu gestartet.
+3. Das Studio deshalb immer über die Verknüpfung „Badgy Kartenstudio“ starten, nicht über ein angeheftetes Edge-Fenster.
+
+## Auf dem Mac
+Bei jedem Start über die Verknüpfung kopiert `tools/mac-kopie.ps1` die neueste Fassung (`index.html`, Symbol, `assets`)
+über die Parallels-Freigabe nach `~/Badgy Kartenstudio` auf dem Mac. Dort `index.html` im Browser öffnen.
+Ist die Freigabe nicht erreichbar, wird das Kopieren übersprungen.
 
 Das Symbol neu erzeugen: `python tools/make_icon.py`.
 

@@ -12,6 +12,17 @@ $args_  = @("--app=`"$url`"", '--kiosk-printing', "--user-data-dir=`"$profil`"",
 
 if (-not $Drucker) { $Drucker = Get-Printer | Where-Object { $_.Name -match 'Badgy|Evolis' } | Select-Object -First 1 -ExpandProperty Name }
 
+# Neueste Fassung auch auf den Mac kopieren (~/Badgy Kartenstudio)
+& (Join-Path $PSScriptRoot 'mac-kopie.ps1')
+
+# Studio-Fenster mit dem Studio-Profil, die ohne --kiosk-printing laufen, würden mit Druckfenster drucken: beenden
+$studio = @(Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -match [regex]::Escape($profil) })
+$ohneKiosk = $studio | Where-Object { $_.CommandLine -notmatch '--type=' -and $_.CommandLine -notmatch '--kiosk-printing' }
+if ($ohneKiosk) {
+  $ohneKiosk | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Start-Sleep -Seconds 2
+}
+
 # Nur ändern, solange das Studio nicht läuft – Edge überschreibt die Datei sonst beim Beenden
 $laeuft = Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -match [regex]::Escape($profil) }
 $prefs  = Join-Path $profil 'Default\Preferences'
