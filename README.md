@@ -6,13 +6,14 @@ Kleines Designstudio für Mitgliedskarten, VIP-Karten und Gutscheine im Kartenfo
 `index.html` doppelklicken → öffnet in Chrome. Keine Installation, kein Server.
 Internet wird nur für die Schriften (Google Fonts) gebraucht; ohne Internet greifen Ersatzschriften.
 
-## Als Programm in der Taskleiste
+## Als Programm starten
 1. Rechtsklick auf `tools/verknuepfung-erstellen.ps1` → **Mit PowerShell ausführen**.
-   Das legt „Badgy Kartenstudio“ auf dem Desktop und im Startmenü an (Symbol `kartenstudio.ico`,
-   öffnet als eigenes Edge-Fenster ohne Adressleiste). Über diese Verknüpfung wird **ohne Druckfenster direkt auf den
-   Badgy** gedruckt (`--kiosk-printing`, eigenes Browserprofil, Edge-Richtlinie für das Druckziel).
-   Anderer Druckername: `tools\verknuepfung-erstellen.ps1 -Drucker "Name"`.
-2. Startmenü öffnen, „Badgy Kartenstudio“ suchen, Rechtsklick → **An Taskleiste anheften**.
+   Das legt „Badgy Kartenstudio“ auf dem Desktop und im Startmenü an (Symbol `kartenstudio.ico`).
+2. Die Verknüpfung startet `tools/kartenstudio-starten.ps1`: Edge als eigenes Fenster mit eigenem Profil und
+   `--kiosk-printing`. „Drucken“ geht damit **ohne Druckfenster direkt an den Badgy**: Das Skript trägt vor jedem
+   Start den Drucker mit „Badgy“/„Evolis“ im Namen als letztes Druckziel (randlos) im Studio-Profil ein.
+3. Für die Taskleiste: Studio über die Verknüpfung starten und das Fenster anheften (ein so angehefteter Eintrag
+   startet Edge ohne das Skript – das Druckziel bleibt aber vom letzten Start gesetzt).
 
 Das Symbol neu erzeugen: `python tools/make_icon.py`.
 
