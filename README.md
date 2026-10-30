@@ -19,6 +19,7 @@ Das Symbol neu erzeugen: `python tools/make_icon.py`.
 
 ## Funktionen
 - Vorder- und Rückseite, Vorlagen (wechseln sofort beim Auswählen, Strg+Z holt das vorige Design zurück): Mitgliedskarte, VIP-Karte, Gutschein, VIP Neon, VIP Clean White, Leer
+- Jede Vorlage merkt sich deine Änderungen dauerhaft (auch nach Neustart); „Original“ setzt sie auf das ursprüngliche Design zurück
 - Original-Logo Cooltourszene in Gold auf allen drei Karten, auch als Werkzeug „Logo (Gold)“
 - Mitgliedskarte mit Kategorie (Gönner, Aktiv, Passiv), „gültig ab“ und automatisch berechnetem „gültig bis“ (ein Jahr)
 - QR-Code auf der Rückseite mit allen Kartendaten (Kartenart, Name, Nummer, Telefon, E-Mail, Wert, gültig bis; leere Angaben werden weggelassen)

@@ -2472,7 +2472,7 @@ table.prev tr.cur td{color:var(--gold)}
       <option value="clean">Vorlage: VIP Clean White</option>
       <option value="blank">Vorlage: Leer</option>
     </select>
-    <button class="btn" id="tplBtn" title="Gewählte Vorlage neu laden (eigene Änderungen werden ersetzt)">Neu laden</button>
+    <button class="btn" id="tplBtn" title="Vorlage auf das Original-Design zurücksetzen (deine Änderungen an dieser Vorlage werden ersetzt)">Original</button>
     <div class="sep"></div>
     <button class="btn" id="openBtn">Öffnen</button>
     <button class="btn" id="saveBtn">Speichern</button>
@@ -2633,6 +2633,14 @@ const PAINT_OPTS = [["solid","Farbe"],["gold","Gold-Effekt"],["silver","Silber-E
 const TYPE_LABEL = {text:"Text",rect:"Rechteck",ellipse:"Kreis",image:"Bild",qr:"QR-Code"};
 const TYPE_ICON = {text:"T",rect:"■",ellipse:"●",image:"▣",qr:"▦"};
 const STORE = "badgy-kartenstudio-v1";
+// Jede Vorlage merkt sich ihr zuletzt bearbeitetes Design dauerhaft
+const MYTPL_KEY = "badgy-kartenstudio-vorlagen";
+function myTpls(){ try { return JSON.parse(localStorage.getItem(MYTPL_KEY)) || {}; } catch(e){ return {}; } }
+function saveMyTpl(){
+  if (!doc.tpl || !TEMPLATES[doc.tpl]) return;
+  const all = myTpls(); all[doc.tpl] = JSON.parse(JSON.stringify(doc, strip));
+  try { localStorage.setItem(MYTPL_KEY, JSON.stringify(all)); } catch(e){}
+}
 
 const $ = s => document.querySelector(s);
 function E(tag, attrs = {}, ...kids){
@@ -2838,7 +2846,7 @@ function commit(){
   updUndo();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORE, s); }
+    try { localStorage.setItem(STORE, s); saveMyTpl(); }
     catch(e){ toast("Automatisch speichern nicht möglich (Bilder zu gross) – bitte über „Speichern“ sichern."); }
   }, 300);
 }
@@ -3573,14 +3581,18 @@ $("#pngBtn").addEventListener("click", () => {
   c.toBlob(b => download(b, `${safeName(doc.name)}-${state.side === "front" ? "vorne" : "hinten"}${tag}.png`), "image/png");
 });
 // Vorlage wechseln: sofort beim Auswählen; Strg+Z holt das vorige Design zurück
-function loadTemplate(k){
+function loadTemplate(k, original){
   closeEditor();
-  doc = TEMPLATES[k](); doc.tpl = k; if (TPL_CSV[k]) csvText = TPL_CSV[k];
+  const mine = !original && myTpls()[k];
+  doc = mine ? JSON.parse(JSON.stringify(mine)) : TEMPLATES[k](); doc.tpl = k; if (TPL_CSV[k]) csvText = TPL_CSV[k];
   state.sel = null; state.rec = 0; setSide("front"); afterLoad(); commit();
-  toast(`Vorlage „${$("#tplSel").selectedOptions[0].textContent.replace("Vorlage: ", "")}“ geladen – Strg+Z macht es rückgängig.`);
+  const nm = $("#tplSel").selectedOptions[0].textContent.replace("Vorlage: ", "");
+  toast(original ? `„${nm}“ auf das Original zurückgesetzt – Strg+Z macht es rückgängig.` : `Vorlage „${nm}“ geladen${mine ? " (mit deinen Änderungen)" : ""}.`);
 }
 $("#tplSel").addEventListener("change", () => loadTemplate($("#tplSel").value));
-$("#tplBtn").addEventListener("click", () => loadTemplate($("#tplSel").value));
+$("#tplBtn").addEventListener("click", () => {
+  if (confirm("Diese Vorlage auf das Original-Design zurücksetzen? Deine Änderungen daran werden ersetzt (Strg+Z holt sie zurück).")) loadTemplate($("#tplSel").value, true);
+});
 $("#docName").addEventListener("input", e => { doc.name = e.target.value; });
 $("#docName").addEventListener("change", commit);
 
