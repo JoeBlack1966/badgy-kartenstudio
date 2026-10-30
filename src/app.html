@@ -251,6 +251,11 @@ table.prev tr.cur td{color:var(--gold)}
           <div id="recForm"></div>
         </div>
         <div class="sect">
+          <h3>Einlass-Check-in auf der Webseite</h3>
+          <div class="note">Der QR-Code auf Mitglieds- und VIP-Karten öffnet die Einlass-Prüfung auf cooltourszene.com. Jede Karte bekommt dafür automatisch einen Geheimcode (Spalte <b>Code</b>, nicht ändern). Nach dem Drucken die Liste exportieren und auf der Webseite unter <b>Check-in → Karten importieren</b> hochladen.</div>
+          <div class="btnrow" style="margin-top:8px"><button class="btn small" id="webExport">Für Webseite exportieren</button></div>
+        </div>
+        <div class="sect">
           <h3>Fortlaufende Nummern</h3>
           <div id="numBox"></div>
         </div>
@@ -371,10 +376,12 @@ const L = (o) => mk("image", Object.assign({src:LOGO_GOLD, fit:"contain", label:
 const bg = (o) => Object.assign({mode:"solid", c1:"#ffffff", c2:"#000000", angle:135, img:"", imgOpacity:1}, o);
 
 // ---------- Vorlagen ----------
-// QR-Inhalt der Rückseiten: alle Kartendaten als lesbarer Text
+// QR-Inhalt der Rückseiten. Mitglieds- und VIP-Karten: Link zur Einlass-Prüfung auf der Webseite,
+// Name, Telefon und E-Mail sieht nur die angemeldete Security (WordPress-Plugin „Cooltour Check-in“).
+const CHECKIN_URL = "https://cooltourszene.com/clubkarte/{{Nummer}}.{{Code}}";
 const QR_DATA = {
-  member: "COOLTOURSZENE Mitgliedskarte\nKategorie: {{Kategorie}}\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig ab: {{Gültig ab}}\nGültig bis: {{Gültig bis}}",
-  vip: "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig bis: {{Gültig bis}}",
+  member: CHECKIN_URL,
+  vip: CHECKIN_URL,
   voucher: "COOLTOURSZENE Gutschein\nNr.: {{Nummer}}\nWert: {{Wert}}\nGültig bis: {{Gültig bis}}"
 };
 const TEMPLATES = {
@@ -477,7 +484,7 @@ const TEMPLATES = {
       T({text:"{{Name}}",x:64,y:452,w:620,size:38,font:"Orbitron",weight:600,color:"#ffffff",upper:true,spacing:2}),
       T({text:"{{Nummer}}",x:64,y:514,w:400,size:22,font:"JetBrains Mono",weight:600,color:"#00e5ff",spacing:2}),
       R({x:748,y:370,w:210,h:210,fill:"#ffffff",radius:14}),
-      Q({x:763,y:385,w:180,h:180,text:"VIP-{{Nummer}}",color:"#090418",bgColor:""})
+      Q({x:763,y:385,w:180,h:180,text:CHECKIN_URL,color:"#090418",bgColor:""})
     ]},
     back:{ bg:bg({mode:"linear", c1:"#1f0b40", c2:"#090418", angle:315}), els:[
       R({x:0,y:628,w:1011,h:10,paint:"neon"}),
@@ -1112,7 +1119,7 @@ function renderCsvTable(){
   }}, `+ {{${c}}}`)));
 }
 $("#csv").addEventListener("input", e => { csvText = e.target.value; parseCsv(); updRec(); buildProps(); render(); });
-$("#csv").addEventListener("change", commit);
+$("#csv").addEventListener("change", () => { ensureCodes(); commit(); });
 
 // ---------- Eingabe einer Karte (bearbeitet die aktuelle Zeile der Liste) ----------
 function writeCsv(){
@@ -1166,7 +1173,7 @@ function buildRecForm(){
   if (r){
     box.append(E("div", {class:"empty", style:"margin-bottom:8px"}, `Karte ${state.rec + 1} von ${records.length}`));
     const inputs = {};
-    box.append(E("div", {class:"grid2"}, cols.map(k => fld(k, fieldInput(r, k, inputs), k === "Name" || k === "E-Mail"))));
+    box.append(E("div", {class:"grid2"}, cols.filter(k => k !== "Code").map(k => fld(k, fieldInput(r, k, inputs), k === "Name" || k === "E-Mail"))));
     if (cols.includes("Gültig ab") && cols.includes("Gültig bis"))
       box.append(E("p", {class:"empty", style:"margin:8px 0 0"}, "„Gültig bis“ wird aus „Gültig ab“ berechnet: ein Jahr Mitgliedschaft."));
   }
@@ -1178,7 +1185,7 @@ function buildRecForm(){
       if (last) ["Gültig bis", "Wert", "Kategorie"].forEach(k => { if (k in n) n[k] = last[k]; });
       if ("Gültig ab" in n){ n["Gültig ab"] = fmtDate(new Date()); calcValidity(n); }
       records.push(n); state.rec = records.length - 1; state.data = true; $("#dataChk").checked = true;
-      writeCsv(); commit(); updRec(); buildRecForm(); render();
+      ensureCodes(); writeCsv(); commit(); updRec(); buildRecForm(); render();
       const f = $("#recForm input"); if (f) f.focus();
     }}, "+ Neue Karte"),
     r ? E("button", {class:"btn small", onclick:() => {
@@ -1192,6 +1199,43 @@ function buildRecForm(){
     }}, "Alle „gültig bis“ berechnen") : null));
 }
 
+// ---------- Einlass-Check-in (Webseite) ----------
+const usesCode = () => Object.values(doc.sides).some(sd => sd.els.some(e => e.type === "qr" && /\{\{\s*Code\s*\}\}/.test(e.text)));
+// Geheimcode pro Karte: ohne ihn lässt sich aus der Kartennummer kein gültiger QR-Code basteln
+function newCode(){
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", b = new Uint8Array(8);
+  crypto.getRandomValues(b);
+  return Array.from(b, x => abc[x % abc.length]).join("");
+}
+// Jede Karte mit Nummer bekommt einmalig einen Code (Spalte „Code“); vorhandene Codes bleiben, damit gedruckte Karten gültig bleiben
+function ensureCodes(){
+  if (!usesCode() || !cols.includes("Nummer")) return;
+  let changed = false;
+  if (!cols.includes("Code")){ cols.push("Code"); changed = true; }
+  records.forEach(r => { if (r.Nummer && !r.Code){ r.Code = newCode(); changed = true; } });
+  if (changed) writeCsv();
+}
+// Ältere Designs hatten alle Kontaktdaten offen im QR-Code: auf den Einlass-Link umstellen
+function migrateQr(){
+  Object.values(doc.sides).forEach(sd => sd.els.forEach(e => {
+    if (e.type === "qr" && /^COOLTOURSZENE (Mitgliedskarte|VIP-Karte)\n/.test(e.text)) e.text = CHECKIN_URL;
+  }));
+}
+// Kartenliste für „Check-in → Karten importieren“ im WordPress-Backend
+function exportForWeb(){
+  ensureCodes();
+  const list = records.filter(r => r.Nummer);
+  if (!list.length){ toast("Keine Karten mit Nummer in der Liste."); return; }
+  const head = ["Nummer","Code","Kartenart","Kategorie","Name","Telefon","E-Mail","Gültig ab","Gültig bis"];
+  const q = v => /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const rows = list.map(r => head.map(k => q(String(k === "Kartenart" ? (doc.name || "") : (r[k] ?? "")))));
+  const csv = "\ufeff" + [head, ...rows].map(r => r.join(";")).join("\r\n");
+  download(new Blob([csv], {type:"text/csv;charset=utf-8"}), `${safeName(doc.name)}-webseite.csv`);
+  commit();
+  toast(`${list.length} Karten exportiert – jetzt auf der Webseite unter Check-in → Karten importieren hochladen.`);
+}
+$("#webExport").addEventListener("click", exportForWeb);
+
 // ---------- Fortlaufende Nummern ----------
 const numCfg = () => doc.numbering || (doc.numbering = {...NUM_DEFAULT});
 function fmtNum(n){ const c = numCfg(); return (c.prefix || "") + String(n).padStart(Math.max(1, c.digits | 0), "0"); }
@@ -1199,7 +1243,7 @@ function setList(newCols, rows){
   const delim = rows.some(r => r.some(v => String(v).includes(";"))) ? "\t" : ";";
   csvText = [newCols, ...rows].map(r => r.join(delim)).join("\n");
   $("#csv").value = csvText; state.rec = 0; state.data = true; $("#dataChk").checked = true;
-  parseCsv(); commit(); updRec(); buildProps(); buildNumbering(); render();
+  parseCsv(); ensureCodes(); commit(); updRec(); buildProps(); buildNumbering(); render();
 }
 // Neue Liste: Spalte „Nummer“ fortlaufend, alle anderen Spalten (z. B. Wert, Gültig bis) aus der ersten Zeile übernommen
 function genList(){
@@ -1304,6 +1348,7 @@ function prSummary(){
 }
 ["#prSide","#prWhich","#prCopies","#prRev"].forEach(s => $(s).addEventListener("input", prSummary));
 async function printSide(side){
+  ensureCodes();
   const copies = Math.max(1, Math.min(50, +$("#prCopies").value || 1));
   const area = $("#printArea"); area.innerHTML = "";
   for (const r of printList(side)){
@@ -1339,8 +1384,9 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add
 function afterLoad(){
   $("#docName").value = doc.name || "";
   if (doc.tpl && TEMPLATES[doc.tpl]) $("#tplSel").value = doc.tpl;
+  migrateQr();
   $("#csv").value = csvText;
-  parseCsv(); state.sel = null;
+  parseCsv(); ensureCodes(); state.sel = null;
   buildProps(); refreshLayers(); updRec(); buildNumbering(); render();
 }
 (function init(){
