@@ -2466,6 +2466,8 @@ table.prev tr.cur td{color:var(--gold)}
     <div class="spacer"></div>
     <select id="tplSel" aria-label="Vorlage">
       <option value="member">Vorlage: Mitgliedskarte</option>
+      <option value="honor">Vorlage: Ehrenmitglied</option>
+      <option value="board">Vorlage: Vorstand</option>
       <option value="vip">Vorlage: VIP-Karte</option>
       <option value="voucher">Vorlage: Gutschein</option>
       <option value="neon">Vorlage: VIP Neon</option>
@@ -2677,12 +2679,24 @@ const L = (o) => mk("image", Object.assign({src:LOGO_GOLD, fit:"contain", label:
 const bg = (o) => Object.assign({mode:"solid", c1:"#ffffff", c2:"#000000", angle:135, img:"", imgOpacity:1}, o);
 
 // ---------- Vorlagen ----------
-// QR-Inhalt der Rückseiten: alle Kartendaten als lesbarer Text
+// QR-Inhalt der Rückseiten. Mitglieds-, Ehrenmitglieds-, Vorstands- und VIP-Karten tragen nur den Code
+// aus dem CRM (Spalte „Code“ der Kartenliste, z. B. CTS1-…): Am Einlass liest ihn der Scanner der
+// Website und trägt den Besuch ein. Keine Daten im QR – wer die Karte fremd scannt, erfährt nichts.
+const QR_CODE = "{{Code}}";
 const QR_DATA = {
-  member: "COOLTOURSZENE Mitgliedskarte\nKategorie: {{Kategorie}}\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig ab: {{Gültig ab}}\nGültig bis: {{Gültig bis}}",
-  vip: "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig bis: {{Gültig bis}}",
+  member: QR_CODE,
+  vip: QR_CODE,
   voucher: "COOLTOURSZENE Gutschein\nNr.: {{Nummer}}\nWert: {{Wert}}\nGültig bis: {{Gültig bis}}"
 };
+const QR_ALT = [
+  "COOLTOURSZENE Mitgliedskarte\nKategorie: {{Kategorie}}\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig ab: {{Gültig ab}}\nGültig bis: {{Gültig bis}}",
+  "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig bis: {{Gültig bis}}",
+  "VIP-{{Nummer}}"
+];
+function qrUmstellen(d){
+  for (const side of Object.values(d.sides || {}))
+    for (const el of side.els || []) if (el.type === "qr" && QR_ALT.includes(el.text)) el.text = QR_CODE;
+}
 const TEMPLATES = {
   member: () => ({ name:"Mitgliedskarte", numbering:{prefix:"M-", start:1, count:10, digits:4}, sides:{
     front:{ bg:bg({mode:"linear", c1:"#13324a", c2:"#06121c", angle:135}), els:[
@@ -2708,6 +2722,52 @@ const TEMPLATES = {
       Q({x:702,y:118,w:250,h:250,text:QR_DATA.member,color:"#0b1e2c",bgColor:"#ffffff",ecc:"L"}),
       T({text:"{{Nummer}}",x:702,y:380,w:250,size:18,font:"JetBrains Mono",weight:600,color:"#13324a",align:"center"}),
       T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#6c8090"})
+    ]}
+  }}),
+  honor: () => ({ name:"Ehrenmitglied", numbering:{prefix:"EM-", start:1, count:10, digits:4}, sides:{
+    front:{ bg:bg({mode:"linear", c1:"#4a1020", c2:"#12050a", angle:135}), els:[
+      R({x:26,y:26,w:959,h:586,noFill:true,stroke:"#c9a04a",strokeW:2.5,strokePaint:"gold",radius:30}),
+      L({x:80,y:64,w:400}),
+      T({text:"EHRENMITGLIED",x:74,y:140,w:860,size:84,font:"Cinzel",weight:700,paint:"gold",lh:1,fit:false,glow:"#d6b46a",glowBlur:16}),
+      T({text:"{{Name}}",x:80,y:352,w:640,size:36,weight:600,color:"#ffffff",upper:true,spacing:2}),
+      T({text:"{{Telefon}}     {{E-Mail}}",x:80,y:410,w:840,size:27,font:"Manrope",weight:600,color:"#f0d9c4",spacing:0.3}),
+      T({text:"MITGLIEDSNR.",x:80,y:510,w:240,size:13,weight:700,spacing:4,color:"#c8957d",fit:false}),
+      T({text:"{{Nummer}}",x:80,y:532,w:260,size:26,font:"JetBrains Mono",weight:600,color:"#f6e6d6",spacing:1}),
+      T({text:"GÜLTIG",x:360,y:510,w:220,size:13,weight:700,spacing:4,color:"#c8957d",fit:false}),
+      T({text:"UNBEFRISTET",x:360,y:532,w:300,size:26,weight:500,color:"#f6e6d6",spacing:2}),
+      T({text:"✦",x:880,y:520,w:60,size:40,paint:"gold",align:"right",fit:false})
+    ]},
+    back:{ bg:bg({mode:"solid", c1:"#fbf6ef"}), els:[
+      R({x:0,y:0,w:1011,h:92,fill:"#4a1020"}),
+      T({text:"EHRENMITGLIED",x:60,y:40,w:891,size:20,weight:700,spacing:5,color:"#ffffff",fit:false}),
+      T({text:"Diese Karte ist persönlich und\nnicht übertragbar.\nBitte beim Einlass vorzeigen.\nBei Verlust bitte sofort melden.",x:60,y:136,w:600,size:24,weight:500,color:"#3a2a22",lh:1.55,fit:false}),
+      Q({x:702,y:118,w:250,h:250,text:QR_CODE,color:"#2a0b16",bgColor:"#ffffff",ecc:"L"}),
+      T({text:"{{Nummer}}",x:702,y:380,w:250,size:18,font:"JetBrains Mono",weight:600,color:"#4a1020",align:"center"}),
+      T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#8c6f5c"})
+    ]}
+  }}),
+  board: () => ({ name:"Vorstand", numbering:{prefix:"VS-", start:1, count:10, digits:4}, sides:{
+    front:{ bg:bg({mode:"linear", c1:"#2e2a2b", c2:"#0c0b0b", angle:135}), els:[
+      T({text:"VORSTAND",x:380,y:196,w:560,size:120,weight:800,color:"#ffffff",opacity:0.06,align:"right",lh:1,fit:false}),
+      L({x:80,y:62,w:440}),
+      T({text:"VORSTAND",x:80,y:128,w:600,size:16,weight:600,spacing:6,paint:"silver",fit:false}),
+      R({x:676,y:62,w:268,h:58,noFill:true,stroke:"#a9aeb5",strokeW:2,strokePaint:"silver",radius:29}),
+      T({text:"{{Kategorie}}",x:676,y:76,w:268,size:24,weight:700,color:"#ffffff",upper:true,spacing:4,align:"center"}),
+      R({x:80,y:164,w:120,h:3,paint:"silver"}),
+      T({text:"{{Name}}",x:80,y:352,w:640,size:36,weight:600,color:"#ffffff",upper:true,spacing:2}),
+      T({text:"{{Telefon}}     {{E-Mail}}",x:80,y:410,w:840,size:27,font:"Manrope",weight:600,color:"#e4e6e9",spacing:0.3}),
+      T({text:"MITGLIEDSNR.",x:80,y:510,w:240,size:13,weight:700,spacing:4,color:"#9a9ea5",fit:false}),
+      T({text:"{{Nummer}}",x:80,y:532,w:260,size:26,font:"JetBrains Mono",weight:600,color:"#f4f6f8",spacing:1}),
+      T({text:"GÜLTIG BIS",x:360,y:510,w:220,size:13,weight:700,spacing:4,color:"#9a9ea5",fit:false}),
+      T({text:"{{Gültig bis}}",x:360,y:532,w:240,size:26,weight:500,color:"#f4f6f8",spacing:1})
+    ]},
+    back:{ bg:bg({mode:"solid", c1:"#f4f5f6"}), els:[
+      R({x:0,y:0,w:1011,h:92,fill:"#231f20"}),
+      T({text:"VORSTAND",x:60,y:40,w:891,size:20,weight:700,spacing:5,color:"#ffffff",fit:false}),
+      T({text:"Diese Karte ist persönlich und\nnicht übertragbar.\nBitte beim Einlass vorzeigen.\nBei Verlust bitte sofort melden.",x:60,y:136,w:600,size:24,weight:500,color:"#231f20",lh:1.55,fit:false}),
+      Q({x:702,y:118,w:250,h:250,text:QR_CODE,color:"#231f20",bgColor:"#ffffff",ecc:"L"}),
+      T({text:"{{Nummer}}",x:702,y:380,w:250,size:18,font:"JetBrains Mono",weight:600,color:"#231f20",align:"center"}),
+      T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#6f7378"})
     ]}
   }}),
   voucher: () => ({ name:"Gutschein", numbering:{prefix:"GS-", start:1, count:10, digits:4}, sides:{
@@ -2783,7 +2843,7 @@ const TEMPLATES = {
       T({text:"{{Name}}",x:64,y:452,w:620,size:38,font:"Orbitron",weight:600,color:"#ffffff",upper:true,spacing:2}),
       T({text:"{{Nummer}}",x:64,y:514,w:400,size:22,font:"JetBrains Mono",weight:600,color:"#00e5ff",spacing:2}),
       R({x:748,y:370,w:210,h:210,fill:"#ffffff",radius:14}),
-      Q({x:763,y:385,w:180,h:180,text:"VIP-{{Nummer}}",color:"#090418",bgColor:""})
+      Q({x:763,y:385,w:180,h:180,text:QR_DATA.vip,color:"#090418",bgColor:""})
     ]},
     back:{ bg:bg({mode:"linear", c1:"#1f0b40", c2:"#090418", angle:315}), els:[
       R({x:0,y:628,w:1011,h:10,paint:"neon"}),
@@ -2813,10 +2873,12 @@ const TEMPLATES = {
     back:{ bg:bg({mode:"solid", c1:"#ffffff"}), els:[] }
   }})
 };
-const SAMPLE_CSV = "Name;Nummer;Telefon;E-Mail;Gültig bis\nJoachim Schwarz;VIP-0001;+43 660 1234567;joachim@beispiel.at;12/2027\nMax Muster;VIP-0002;+43 664 7654321;max@beispiel.at;12/2027\nAnna Beispiel;VIP-0003;+43 676 1112233;anna@beispiel.at;06/2027";
+const SAMPLE_CSV = "Name;Nummer;Telefon;E-Mail;Gültig bis;Code\nJoachim Schwarz;VIP-0001;+43 660 1234567;joachim@beispiel.at;12/2027;CTS1-MUSTER234567\nMax Muster;VIP-0002;+43 664 7654321;max@beispiel.at;12/2027;CTS1-MUSTER234568\nAnna Beispiel;VIP-0003;+43 676 1112233;anna@beispiel.at;06/2027;CTS1-MUSTER234569";
 // Beispiel-Liste je Vorlage (wird beim Laden der Vorlage eingesetzt)
 const TPL_CSV = {
-  member: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig ab;Gültig bis\nJoachim Schwarz;M-0001;Gönner;+43 660 1234567;joachim@beispiel.at;01.11.2026;31.10.2027\nMax Muster;M-0002;Aktiv;+43 664 7654321;max@beispiel.at;01.01.2027;31.12.2027\nAnna Beispiel;M-0003;Passiv;+43 676 1112233;anna@beispiel.at;15.03.2027;14.03.2028",
+  member: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig ab;Gültig bis;Code\nJoachim Schwarz;M-0001;Gönner;+43 660 1234567;joachim@beispiel.at;01.11.2026;31.10.2027;CTS1-MUSTER234567\nMax Muster;M-0002;Aktiv;+43 664 7654321;max@beispiel.at;01.01.2027;31.12.2027;CTS1-MUSTER234568\nAnna Beispiel;M-0003;Passiv;+43 676 1112233;anna@beispiel.at;15.03.2027;14.03.2028;CTS1-MUSTER234569",
+  honor: "Name;Nummer;Telefon;E-Mail;Code\nJoachim Schwarz;EM-0001;+43 660 1234567;joachim@beispiel.at;CTS1-MUSTER234567",
+  board: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig bis;Code\nJoachim Schwarz;VS-0001;Obmann;+43 660 1234567;joachim@beispiel.at;31.12.2027;CTS1-MUSTER234567",
   vip: SAMPLE_CSV, neon: SAMPLE_CSV, clean: SAMPLE_CSV,
   voucher: "Nummer;Wert;Gültig bis\nGS-0001;50 €;31.12.2027\nGS-0002;50 €;31.12.2027\nGS-0003;50 €;31.12.2027"
 };
@@ -2960,8 +3022,9 @@ function qrMatrix(text, ecc){
 function drawQr(ctx, el, rec){
   const s = Math.min(el.w, el.h);
   const txt = rec ? resolve(el.text, rec).split("\n").filter(l => !/:\s*$/.test(l)).join("\n") : el.text;
-  const m = qrMatrix(txt || " ", el.ecc || "M");
+  const m = txt.trim() ? qrMatrix(txt, el.ecc || "M") : null;
   if (el.bgColor){ ctx.fillStyle = el.bgColor; ctx.fillRect(el.x, el.y, s, s); }
+  if (!txt.trim()){ ctx.strokeStyle = el.color; ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, s, s); ctx.fillStyle = el.color; ctx.font = "600 20px Arial"; ctx.fillText("Code fehlt", el.x + 10, el.y + s/2); return; }
   if (!m){ ctx.strokeStyle = el.color; ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, s, s); ctx.fillStyle = el.color; ctx.font = "600 20px Arial"; ctx.fillText("QR zu lang", el.x + 10, el.y + s/2); return; }
   const cell = s / m.n; ctx.fillStyle = el.color;
   for (let r = 0; r < m.n; r++) for (let c = 0; c < m.n; c++) if (m.d[r][c]){
@@ -3647,6 +3710,7 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add
 
 // ---------- Start ----------
 function afterLoad(){
+  qrUmstellen(doc);
   $("#docName").value = doc.name || "";
   if (doc.tpl && TEMPLATES[doc.tpl]) $("#tplSel").value = doc.tpl;
   $("#csv").value = csvText;
