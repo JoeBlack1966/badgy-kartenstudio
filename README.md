@@ -39,3 +39,8 @@ umgekehrter Reihenfolge“).
 ## Entwicklung
 Quelle: `src/app.html`. `python3 build.py` bettet die QR-Bibliothek (qrcode-generator, MIT) und das Gold-Logo ein und schreibt `index.html`.
 Das Gold-Logo entsteht aus `assets/logo-cooltourszene-original.jpg` mit `python tools/make_logo.py` (braucht Pillow).
+
+## Einlass-Check-in auf der Webseite
+Mitglieds- und VIP-Karten tragen im QR-Code einen Link `https://cooltourszene.com/clubkarte/<Nummer>.<Code>`.
+Die Security scannt ihn mit der Scan-Seite des WordPress-Plugins in `wordpress/cooltour-checkin` (siehe dortiges README);
+die Webseite zeigt, wer bei welchem Event war. Kartenliste dafür im Tab „Liste“ → „Für Webseite exportieren“.
