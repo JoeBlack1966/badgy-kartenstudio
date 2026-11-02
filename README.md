@@ -15,6 +15,8 @@ Internet wird nur für die Schriften (Google Fonts) gebraucht; ohne Internet gre
    Ein Studio-Fenster, das ohne `--kiosk-printing` läuft (z. B. aus einem angehefteten Taskleisten-Eintrag), wird
    dabei geschlossen und neu gestartet.
 3. Das Studio deshalb immer über die Verknüpfung „Badgy Kartenstudio“ starten, nicht über ein angeheftetes Edge-Fenster.
+4. „Speichern“ (JSON) und „PNG“ landen ohne Nachfrage im Ordner, den `$Ablage` oben in
+   `tools/kartenstudio-starten.ps1` festlegt (aktuell „…\Mitglieder und VIP\VIP Karten“ in SharePoint).
 
 ## Auf dem Mac
 Bei jedem Start über die Verknüpfung kopiert `tools/mac-kopie.ps1` die neueste Fassung (`index.html`, Symbol, `assets`)

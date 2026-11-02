@@ -3,7 +3,9 @@
 # (weder der Windows-Standarddrucker noch die Edge-Richtlinie für das Druckziel ändern das).
 # Deshalb wird vor jedem Start im Studio-Profil der Badgy als letztes Ziel eingetragen:
 # randlos, ohne Kopf-/Fußzeile, mit Hintergrundgrafiken.
-param([string]$Drucker = '')
+# Außerdem landen „Speichern“ (JSON) und „PNG“ ohne Nachfrage im Ordner $Ablage.
+param([string]$Drucker = '',
+      [string]$Ablage  = 'C:\Users\jschwarz\Schwarzpersonal AG\Geschäftsleitung - Dokumente\Cooltourszene\Administration\Mitglieder und VIP\VIP Karten')
 $dir    = Split-Path -Parent $PSScriptRoot
 $url    = ([Uri](Join-Path $dir 'index.html')).AbsoluteUri
 $profil = Join-Path $env:LOCALAPPDATA 'BadgyKartenstudio\Browser'
@@ -44,6 +46,12 @@ if ($Drucker -and -not $laeuft) {
   }
   if (-not $p.printing) { $p | Add-Member -NotePropertyName printing -NotePropertyValue ([pscustomobject]@{}) }
   $p.printing | Add-Member -NotePropertyName print_preview_sticky_settings -NotePropertyValue ([pscustomobject]@{ appState = $state }) -Force
+  if ($Ablage -and (Test-Path -LiteralPath $Ablage)) {
+    foreach ($k in 'download', 'savefile') { if (-not $p.$k) { $p | Add-Member -NotePropertyName $k -NotePropertyValue ([pscustomobject]@{}) } }
+    $p.download | Add-Member -NotePropertyName default_directory -NotePropertyValue $Ablage -Force
+    $p.download | Add-Member -NotePropertyName prompt_for_download -NotePropertyValue $false -Force
+    $p.savefile | Add-Member -NotePropertyName default_directory -NotePropertyValue $Ablage -Force
+  }
   [IO.File]::WriteAllText($prefs, ($p | ConvertTo-Json -Compress -Depth 100), (New-Object Text.UTF8Encoding $false))
 }
 
