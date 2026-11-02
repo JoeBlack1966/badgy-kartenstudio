@@ -381,23 +381,35 @@ const L = (o) => mk("image", Object.assign({src:LOGO_GOLD, fit:"contain", label:
 const bg = (o) => Object.assign({mode:"solid", c1:"#ffffff", c2:"#000000", angle:135, img:"", imgOpacity:1}, o);
 
 // ---------- Vorlagen ----------
-// QR-Inhalt der Rückseiten. Mitglieds-, Ehrenmitglieds-, Vorstands- und VIP-Karten tragen nur den Code
-// aus dem CRM (Spalte „Code“ der Kartenliste, z. B. CTS1-…): Am Einlass liest ihn der Scanner der
-// Website und trägt den Besuch ein. Keine Daten im QR – wer die Karte fremd scannt, erfährt nichts.
-const QR_CODE = "{{Code}}";
+// QR-Inhalt der Rückseiten: Name, Telefon, E-Mail und Nummer als lesbarer Text, direkt aus der Kartenliste.
+// Zeilen ohne Wert fallen beim Zeichnen weg.
+const qrPerson = (art) => `COOLTOURSZENE ${art}\nName: {{Name}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nNr.: {{Nummer}}`;
 const QR_DATA = {
-  member: QR_CODE,
-  vip: QR_CODE,
+  member: qrPerson("Mitgliedskarte"),
+  honor: qrPerson("Ehrenmitglied"),
+  board: qrPerson("Vorstand"),
+  vip: qrPerson("VIP-Karte"),
   voucher: "COOLTOURSZENE Gutschein\nNr.: {{Nummer}}\nWert: {{Wert}}\nGültig bis: {{Gültig bis}}"
 };
+// Frühere QR-Inhalte (CRM-Code, ältere Datentexte) werden beim Laden auf den Inhalt der Kartenart umgestellt
 const QR_ALT = [
   "COOLTOURSZENE Mitgliedskarte\nKategorie: {{Kategorie}}\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig ab: {{Gültig ab}}\nGültig bis: {{Gültig bis}}",
   "COOLTOURSZENE VIP-Karte\nName: {{Name}}\nNr.: {{Nummer}}\nTel.: {{Telefon}}\nE-Mail: {{E-Mail}}\nGültig bis: {{Gültig bis}}",
   "VIP-{{Nummer}}"
 ];
 function qrUmstellen(d){
+  const neu = QR_DATA[d.tpl] || QR_DATA.vip;
+  let geaendert = false;
   for (const side of Object.values(d.sides || {}))
-    for (const el of side.els || []) if (el.type === "qr" && QR_ALT.includes(el.text)) el.text = QR_CODE;
+    for (const el of side.els || [])
+      if (el.type === "qr" && el.text !== neu && (/\{\{\s*Code\s*\}\}/.test(el.text) || QR_ALT.includes(el.text))){ el.text = neu; geaendert = true; }
+  return geaendert;
+}
+// Gespeicherte Designs der Vorlagen ebenfalls umstellen, damit „Original“ dafür nicht nötig ist
+function myTplsUmstellen(){
+  const all = myTpls();
+  if (Object.entries(all).map(([k, d]) => qrUmstellen(Object.assign(d, {tpl: d.tpl || k}))).some(Boolean))
+    try { localStorage.setItem(MYTPL_KEY, JSON.stringify(all)); } catch(e){}
 }
 const TEMPLATES = {
   member: () => ({ name:"Mitgliedskarte", numbering:{prefix:"M-", start:1, count:10, digits:4}, sides:{
@@ -443,7 +455,7 @@ const TEMPLATES = {
       R({x:0,y:0,w:1011,h:92,fill:"#4a1020"}),
       T({text:"EHRENMITGLIED",x:60,y:40,w:891,size:20,weight:700,spacing:5,color:"#ffffff",fit:false}),
       T({text:"Diese Karte ist persönlich und\nnicht übertragbar.\nBitte beim Einlass vorzeigen.\nBei Verlust bitte sofort melden.",x:60,y:136,w:600,size:24,weight:500,color:"#3a2a22",lh:1.55,fit:false}),
-      Q({x:702,y:118,w:250,h:250,text:QR_CODE,color:"#2a0b16",bgColor:"#ffffff",ecc:"L"}),
+      Q({x:702,y:118,w:250,h:250,text:QR_DATA.honor,color:"#2a0b16",bgColor:"#ffffff",ecc:"L"}),
       T({text:"{{Nummer}}",x:702,y:380,w:250,size:18,font:"JetBrains Mono",weight:600,color:"#4a1020",align:"center"}),
       T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#8c6f5c"})
     ]}
@@ -467,7 +479,7 @@ const TEMPLATES = {
       R({x:0,y:0,w:1011,h:92,fill:"#231f20"}),
       T({text:"VORSTAND",x:60,y:40,w:891,size:20,weight:700,spacing:5,color:"#ffffff",fit:false}),
       T({text:"Diese Karte ist persönlich und\nnicht übertragbar.\nBitte beim Einlass vorzeigen.\nBei Verlust bitte sofort melden.",x:60,y:136,w:600,size:24,weight:500,color:"#231f20",lh:1.55,fit:false}),
-      Q({x:702,y:118,w:250,h:250,text:QR_CODE,color:"#231f20",bgColor:"#ffffff",ecc:"L"}),
+      Q({x:702,y:118,w:250,h:250,text:QR_DATA.board,color:"#231f20",bgColor:"#ffffff",ecc:"L"}),
       T({text:"{{Nummer}}",x:702,y:380,w:250,size:18,font:"JetBrains Mono",weight:600,color:"#231f20",align:"center"}),
       T({text:"www.cooltourszene.com",x:60,y:570,w:891,size:16,weight:500,spacing:1.5,color:"#6f7378"})
     ]}
@@ -575,12 +587,12 @@ const TEMPLATES = {
     back:{ bg:bg({mode:"solid", c1:"#ffffff"}), els:[] }
   }})
 };
-const SAMPLE_CSV = "Name;Nummer;Telefon;E-Mail;Gültig bis;Code\nJoachim Schwarz;VIP-0001;+43 660 1234567;joachim@beispiel.at;12/2027;CTS1-MUSTER234567\nMax Muster;VIP-0002;+43 664 7654321;max@beispiel.at;12/2027;CTS1-MUSTER234568\nAnna Beispiel;VIP-0003;+43 676 1112233;anna@beispiel.at;06/2027;CTS1-MUSTER234569";
+const SAMPLE_CSV = "Name;Nummer;Telefon;E-Mail;Gültig bis\nJoachim Schwarz;VIP-0001;+43 660 1234567;joachim@beispiel.at;12/2027\nMax Muster;VIP-0002;+43 664 7654321;max@beispiel.at;12/2027\nAnna Beispiel;VIP-0003;+43 676 1112233;anna@beispiel.at;06/2027";
 // Beispiel-Liste je Vorlage (wird beim Laden der Vorlage eingesetzt)
 const TPL_CSV = {
-  member: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig ab;Gültig bis;Code\nJoachim Schwarz;M-0001;Gönner;+43 660 1234567;joachim@beispiel.at;01.11.2026;31.10.2027;CTS1-MUSTER234567\nMax Muster;M-0002;Aktiv;+43 664 7654321;max@beispiel.at;01.01.2027;31.12.2027;CTS1-MUSTER234568\nAnna Beispiel;M-0003;Passiv;+43 676 1112233;anna@beispiel.at;15.03.2027;14.03.2028;CTS1-MUSTER234569",
-  honor: "Name;Nummer;Telefon;E-Mail;Code\nJoachim Schwarz;EM-0001;+43 660 1234567;joachim@beispiel.at;CTS1-MUSTER234567",
-  board: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig bis;Code\nJoachim Schwarz;VS-0001;Obmann;+43 660 1234567;joachim@beispiel.at;31.12.2027;CTS1-MUSTER234567",
+  member: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig ab;Gültig bis\nJoachim Schwarz;M-0001;Gönner;+43 660 1234567;joachim@beispiel.at;01.11.2026;31.10.2027\nMax Muster;M-0002;Aktiv;+43 664 7654321;max@beispiel.at;01.01.2027;31.12.2027\nAnna Beispiel;M-0003;Passiv;+43 676 1112233;anna@beispiel.at;15.03.2027;14.03.2028",
+  honor: "Name;Nummer;Telefon;E-Mail\nJoachim Schwarz;EM-0001;+43 660 1234567;joachim@beispiel.at",
+  board: "Name;Nummer;Kategorie;Telefon;E-Mail;Gültig bis\nJoachim Schwarz;VS-0001;Obmann;+43 660 1234567;joachim@beispiel.at;31.12.2027",
   vip: SAMPLE_CSV, neon: SAMPLE_CSV, clean: SAMPLE_CSV,
   voucher: "Nummer;Wert;Gültig bis\nGS-0001;50 €;31.12.2027\nGS-0002;50 €;31.12.2027\nGS-0003;50 €;31.12.2027"
 };
@@ -1407,7 +1419,7 @@ async function doPrint(){
   const bad = qrProblems(mode === "both" ? ["front", "back"] : [mode]);
   if (bad.length){
     alert(`Nicht gedruckt – der QR-Code wäre auf diesen Karten kein gültiger Code:\n\n${bad.join("\n")}\n\n` +
-      "„Code fehlt“: In der Kartenliste fehlt die Spalte „Code“ oder ihr Wert. „QR zu lang“: Der Inhalt passt nicht in den QR-Code.");
+      "„Code fehlt“: Der QR-Code hätte keinen Inhalt – Name, Telefon und E-Mail der Karte sind leer. „QR zu lang“: Der Inhalt passt nicht in den QR-Code.");
     return;
   }
   if (mode !== "both") return printSide(mode);
@@ -1439,6 +1451,7 @@ function afterLoad(){
   buildProps(); refreshLayers(); updRec(); buildNumbering(); render();
 }
 (function init(){
+  myTplsUmstellen();
   let loaded = false;
   try { const s = localStorage.getItem(STORE); if (s){ const o = JSON.parse(s); if (o.doc && o.doc.sides){ doc = o.doc; csvText = o.csv ?? SAMPLE_CSV; loaded = true; } } } catch(e){}
   if (!loaded){ doc = TEMPLATES.vip(); doc.tpl = "vip"; }
