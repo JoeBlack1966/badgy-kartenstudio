@@ -3634,8 +3634,17 @@ function download(blob, name){
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 const safeName = s => (s || "karte").replace(/[^\wäöüÄÖÜß\- ]+/g, "").trim().replace(/\s+/g, "-") || "karte";
+// VIP-Karten: Dateiname V_Name_Datum, z. B. V_Dean_Gerster_11-2027 (Datum = „gültig bis“ auf der Karte)
+function vipFileBase(){
+  const rec = curRec();
+  if (doc.tpl !== "vip" || !rec || !String(rec.Name || "").trim()) return "";
+  const part = v => String(v || "").replace(/[\/.]+/g, "-").replace(/[^\wäöüÄÖÜß\- ]+/g, "").trim().replace(/\s+/g, "_");
+  const d = part(rec["Gültig bis"]);
+  return "V_" + part(rec.Name) + (d ? "_" + d : "");
+}
 function saveJson(){
-  download(new Blob([snapshot()], {type:"application/json"}), safeName(doc.name) + ".kartenstudio.json");
+  const vip = vipFileBase();
+  download(new Blob([snapshot()], {type:"application/json"}), vip ? vip + ".json" : safeName(doc.name) + ".kartenstudio.json");
   toast("Design gespeichert – Datei im Download-Ordner.");
 }
 $("#saveBtn").addEventListener("click", saveJson);
@@ -3654,8 +3663,8 @@ function renderToCanvas(side, rec, scale){
 $("#pngBtn").addEventListener("click", () => {
   const rec = curRec();
   const c = renderToCanvas(state.side, rec, 1);
-  const tag = rec ? "-" + safeName(rec[cols[1]] || rec[cols[0]]) : "";
-  c.toBlob(b => download(b, `${safeName(doc.name)}-${state.side === "front" ? "vorne" : "hinten"}${tag}.png`), "image/png");
+  const tag = rec ? "-" + safeName(rec[cols[1]] || rec[cols[0]]) : "", vip = vipFileBase(), sd = state.side === "front" ? "vorne" : "hinten";
+  c.toBlob(b => download(b, vip ? `${vip}_${sd}.png` : `${safeName(doc.name)}-${sd}${tag}.png`), "image/png");
 });
 // Vorlage wechseln: sofort beim Auswählen; Strg+Z holt das vorige Design zurück
 function loadTemplate(k, original){
