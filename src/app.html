@@ -721,9 +721,11 @@ function qrMatrix(text, ecc){
   if (qrCache.size > 300) qrCache.clear();
   qrCache.set(k, m); return m;
 }
+// QR-Inhalt so, wie er gezeichnet wird: Platzhalter ersetzt, Zeilen ohne Wert entfallen
+const qrText = (el, rec) => rec ? resolve(el.text, rec).split("\n").filter(l => !/:\s*$/.test(l)).join("\n") : el.text;
 function drawQr(ctx, el, rec){
   const s = Math.min(el.w, el.h);
-  const txt = rec ? resolve(el.text, rec).split("\n").filter(l => !/:\s*$/.test(l)).join("\n") : el.text;
+  const txt = qrText(el, rec);
   const m = txt.trim() ? qrMatrix(txt, el.ecc || "M") : null;
   if (el.bgColor){ ctx.fillStyle = el.bgColor; ctx.fillRect(el.x, el.y, s, s); }
   if (!txt.trim()){ ctx.strokeStyle = el.color; ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, s, s); ctx.fillStyle = el.color; ctx.font = "600 20px Arial"; ctx.fillText("Code fehlt", el.x + 10, el.y + s/2); return; }
@@ -1388,9 +1390,26 @@ async function printSide(side){
   await Promise.all([...area.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
   window.print();
 }
+// Karten, deren QR-Code statt des Musters „Code fehlt“ oder „QR zu lang“ zeigen würde
+function qrProblems(sides){
+  const bad = new Map();
+  for (const r of printList("front")) for (const s of sides) for (const el of doc.sides[s].els){
+    if (el.type !== "qr" || el.hidden) continue;
+    const t = qrText(el, r), name = r ? (r.Nummer || r[cols[0]] || "?") : "Blanko-Karte";
+    if (!t.trim()) bad.set(name, "Code fehlt");
+    else if (!qrMatrix(t, el.ecc || "M")) bad.set(name, "QR zu lang");
+  }
+  return [...bad].map(([n, why]) => `${n} (${why})`);
+}
 // Vorder- und Rückseite: erst alle Vorderseiten, dann Hinweis zum Wenden, dann die Rückseiten
 async function doPrint(){
   const mode = $("#prSide").value;
+  const bad = qrProblems(mode === "both" ? ["front", "back"] : [mode]);
+  if (bad.length){
+    alert(`Nicht gedruckt – der QR-Code wäre auf diesen Karten kein gültiger Code:\n\n${bad.join("\n")}\n\n` +
+      "„Code fehlt“: In der Kartenliste fehlt die Spalte „Code“ oder ihr Wert. „QR zu lang“: Der Inhalt passt nicht in den QR-Code.");
+    return;
+  }
   if (mode !== "both") return printSide(mode);
   await printSide("front");
   $("#flipRev").checked = $("#prRev").checked;

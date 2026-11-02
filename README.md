@@ -34,6 +34,7 @@ Das Symbol neu erzeugen: `python tools/make_icon.py`.
   Am Einlass liest der Scanner der Website (`/admin/einlass`) den Code und trägt den Besuch ein. Die Liste dafür kommt fertig aus
   der Cooltourszene-Verwaltung: Personen → „Kartenliste“ (Verein) bzw. Mitglieder → „Kartenliste“ (VIP) – kopieren und hier einfügen.
   Fehlt der Code, steht „Code fehlt“ statt eines QR auf der Karte. Gespeicherte Vorlagen mit dem früheren Daten-QR werden beim Laden umgestellt.
+  Vor dem Drucken prüft das Studio alle Karten: Würde ein QR „Code fehlt“ oder „QR zu lang“ zeigen, wird nicht gedruckt und die betroffenen Kartennummern werden genannt.
   Gutscheine behalten ihren QR mit Nummer, Wert und Gültigkeit
 - Fortlaufende Nummern (z. B. GS-0001 … GS-0010) mit Vorsilbe, Stellenzahl, Startnummer und „Nächste Serie“
 - Doppelklick auf einen Text ändert ihn direkt auf der Karte; bei Datenfeldern (Name, Telefon, Kategorie …) nur für diese Karte, der QR-Code passt sich an
